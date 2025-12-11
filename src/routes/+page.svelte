@@ -5,7 +5,6 @@
 	import NumberFlow from "@number-flow/svelte";
 	import CheckIn from "./component_checkin.svelte";
 	import ComponentSessioncompleteoverlay from "./component_sessioncompleteoverlay.svelte";
-	import type { FullscreenEvents } from "lucide-svelte/icons/fullscreen";
 	import { pb } from "$lib";
 
 	let image = $state(undefined) as HTMLImageElement | undefined;
@@ -18,10 +17,14 @@
 	let multiplier_used = $state(1);
 	let scoreShow = $state(0);
 	let context = $state(undefined) as HTMLDivElement | undefined;
+	let leaderboardShown = $state(false);
 
 	let otherOnline = $state([]) as any;
 
 	let fivesec = $state(true);
+
+	let wheelCount = 0;
+	const WHEEL_THRESHOLD = 2;
 
 	let app = $state({
 		running: false,
