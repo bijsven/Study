@@ -6,6 +6,7 @@
 	import CheckIn from "./component_checkin.svelte";
 	import ComponentSessioncompleteoverlay from "./component_sessioncompleteoverlay.svelte";
 	import { pb } from "$lib";
+	import ComponentRanking from "./component_ranking.svelte";
 
 	let image = $state(undefined) as HTMLImageElement | undefined;
 
@@ -17,14 +18,10 @@
 	let multiplier_used = $state(1);
 	let scoreShow = $state(0);
 	let context = $state(undefined) as HTMLDivElement | undefined;
-	let leaderboardShown = $state(false);
 
+	let showLeaderboard = $state(false);
 	let otherOnline = $state([]) as any;
-
 	let fivesec = $state(true);
-
-	let wheelCount = 0;
-	const WHEEL_THRESHOLD = 2;
 
 	let app = $state({
 		running: false,
@@ -369,13 +366,16 @@
 				</div>
 			{/if}
 
-			<p
-				class="text-sm absolute bottom-30 cursor-pointer duration-200
+			<button
+				onclick={() => {
+					showLeaderboard = !showLeaderboard;
+				}}
+				class="text-sm absolute bottom-30 z-10 hover:opacity-100 cursor-pointer duration-200
 				{app.running ? 'opacity-0' : 'opacity-45'}"
 				in:fly={{ duration: 500, y: -5, delay: 1000 }}
 			>
 				<NumberFlow value={scoreShow} /> XP
-			</p>
+			</button>
 
 			<p
 				class="text-sm absolute bottom-24 cursor-pointer hover:opacity-100 duration-200 z-10
@@ -395,6 +395,10 @@
 				Tik om te starten
 			</button>
 		</div>
+
+		{#if showLeaderboard}
+			<ComponentRanking callback={() => (showLeaderboard = false)} />
+		{/if}
 
 		{#if showOverlay}
 			<ComponentSessioncompleteoverlay
