@@ -151,17 +151,19 @@
 				);
 
 				setInterval(async () => {
-					await pb.collection("studyuren_live").update(
-						item.id,
-						{
-							ping: new Date().toISOString(),
-						},
-						{
-							query: {
-								groupId: localStorage.getItem("group")!,
+					if (hasFocus()) {
+						await pb.collection("studyuren_live").update(
+							item.id,
+							{
+								ping: new Date().toISOString(),
 							},
-						}
-					);
+							{
+								query: {
+									groupId: localStorage.getItem("group")!,
+								},
+							}
+						);
+					}
 				}, 5000);
 			}
 
