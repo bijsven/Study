@@ -165,25 +165,29 @@
 				}, 5000);
 			}
 
-			otherOnline = await pb.collection("studyuren_live").getFullList({
-				filter: `ping > "${new Date(Date.now() - 10 * 1000).toISOString().replace("T", " ").split(".")[0]}"`,
-				expand: "user,user.user",
-				query: {
-					groupId: localStorage.getItem("group")!,
-				},
-			});
+			try {
+				otherOnline = await pb.collection("studyuren_live").getFullList({
+					filter: `ping > "${new Date(Date.now() - 10 * 1000).toISOString().replace("T", " ").split(".")[0]}"`,
+					expand: "user,user.user",
+					query: {
+						groupId: localStorage.getItem("group")!,
+					},
+				});
 
-			await pb.collection("studyuren_live").subscribe("*", async () => {
-				otherOnline = await pb
-					.collection("studyuren_live")
-					.getFullList({
-						filter: `ping > "${new Date(Date.now() - 10 * 1000).toISOString().replace("T", " ").split(".")[0]}"`,
-						expand: "user,user.user",
-						query: {
-							groupId: localStorage.getItem("group")!,
-						},
-					});
-			});
+				await pb.collection("studyuren_live").subscribe("*", async () => {
+					otherOnline = await pb
+						.collection("studyuren_live")
+						.getFullList({
+							filter: `ping > "${new Date(Date.now() - 10 * 1000).toISOString().replace("T", " ").split(".")[0]}"`,
+							expand: "user,user.user",
+							query: {
+								groupId: localStorage.getItem("group")!,
+							},
+						});
+				});
+			} catch (e) {
+				console.log("Application crashed with friendNetworkError");
+			}
 		})();
 
 		let totalScore = 0;
