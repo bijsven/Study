@@ -376,7 +376,10 @@
 				<NumberFlow value={scoreShow} /> XP
 			</button>
 
-			<p
+			<button
+				onclick={() => {
+					app.running = !app.running;
+				}}
 				class="text-sm absolute bottom-24 cursor-pointer hover:opacity-100 duration-200 z-10
 				{app.running ? 'opacity-25' : 'opacity-45'}"
 				in:fly={{ duration: 500, y: 5, delay: 1000 }}
@@ -384,7 +387,7 @@
 				{app.running
 					? "Tik ergens om te stoppen"
 					: "Tik ergens om te starten"}
-			</p>
+			</button>
 			<button
 				class="absolute top-0 left-0 h-full w-full opacity-0"
 				onclick={() => {
