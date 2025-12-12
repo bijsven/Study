@@ -43,20 +43,25 @@
 		return { h, m, s };
 	};
 
-	function saveScore(seconds: number) {
-		if (seconds < 5) {
+	async function saveScore(seconds: number) {
+		if (seconds < 15) {
 			return 0;
 		}
 
 		const multiplier = Math.floor(Math.random() * 1) + 1;
 		let score = seconds * multiplier;
-		if (seconds < 60) {
-			score = 0;
-		}
 
 		multiplier_used = multiplier;
 
-		const existing = JSON.parse(localStorage.getItem("sessions") || "[]");
+		const data = await pb
+			.collection("studyuren")
+			.getOne(localStorage.getItem("user:id")!, {
+				query: {
+					groupId: localStorage.getItem("group")!,
+				},
+			});
+
+		const existing = JSON.parse(data.data || "[]") || [];
 
 		existing.push({
 			duration: seconds,
@@ -69,7 +74,7 @@
 		showOverlay = true;
 
 		scoreShow = scoreShow + score;
-		localStorage.setItem("sessions", JSON.stringify(existing));
+
 		pb.collection("studyuren").update(
 			localStorage.getItem("user:id")!,
 			{
@@ -195,30 +200,41 @@
 			}
 		})();
 
-		let totalScore = 0;
-		const sessionsData = localStorage.getItem("sessions");
-		if (sessionsData) {
-			const sessions = JSON.parse(sessionsData);
+		(async () => {
+			let totalScore = 0;
+			const sessionsData = (
+				await pb
+					.collection("studyuren")
+					.getOne(localStorage.getItem("user:id")!, {
+						query: {
+							groupId: localStorage.getItem("group")!,
+						},
+					})
+			).data;
 
-			for (const session of sessions) {
-				totalScore += session.score;
+			if (sessionsData) {
+				const sessions = JSON.parse(sessionsData);
+
+				for (const session of sessions) {
+					totalScore += session.score;
+				}
 			}
-		}
 
-		if (localStorage.getItem("user")) {
-			app.user.id = localStorage.getItem("user") as string;
-		}
-		if (localStorage.getItem("username")) {
-			app.user.name = localStorage.getItem("username") as string;
-		}
+			if (localStorage.getItem("user")) {
+				app.user.id = localStorage.getItem("user") as string;
+			}
+			if (localStorage.getItem("username")) {
+				app.user.name = localStorage.getItem("username") as string;
+			}
+
+			setTimeout(() => {
+				scoreShow = totalScore;
+			}, 900);
+		})();
 
 		setTimeout(() => {
 			fivesec = false;
 		}, 5000);
-
-		setTimeout(() => {
-			scoreShow = totalScore;
-		}, 900);
 
 		mounted = true;
 	});
