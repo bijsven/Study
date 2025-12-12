@@ -18,6 +18,7 @@
 	let multiplier_used = $state(1);
 	let scoreShow = $state(0);
 	let context = $state(undefined) as HTMLDivElement | undefined;
+	let safeOnlineUsers = $state([]) as any;
 
 	let showLeaderboard = $state(false);
 	let otherOnline = $state([]) as any;
@@ -151,42 +152,44 @@
 				);
 
 				setInterval(async () => {
-					if (hasFocus()) {
-						await pb.collection("studyuren_live").update(
-							item.id,
-							{
-								ping: new Date().toISOString(),
+					await pb.collection("studyuren_live").update(
+						item.id,
+						{
+							ping: new Date().toISOString(),
+						},
+						{
+							query: {
+								groupId: localStorage.getItem("group")!,
 							},
-							{
-								query: {
-									groupId: localStorage.getItem("group")!,
-								},
-							}
-						);
-					}
+						}
+					);
 				}, 5000);
 			}
 
 			try {
-				otherOnline = await pb.collection("studyuren_live").getFullList({
-					filter: `ping > "${new Date(Date.now() - 10 * 1000).toISOString().replace("T", " ").split(".")[0]}"`,
-					expand: "user,user.user",
-					query: {
-						groupId: localStorage.getItem("group")!,
-					},
-				});
+				otherOnline = await pb
+					.collection("studyuren_live")
+					.getFullList({
+						filter: `ping > "${new Date(Date.now() - 10 * 1000).toISOString().replace("T", " ").split(".")[0]}"`,
+						expand: "user,user.user",
+						query: {
+							groupId: localStorage.getItem("group")!,
+						},
+					});
 
-				await pb.collection("studyuren_live").subscribe("*", async () => {
-					otherOnline = await pb
-						.collection("studyuren_live")
-						.getFullList({
-							filter: `ping > "${new Date(Date.now() - 10 * 1000).toISOString().replace("T", " ").split(".")[0]}"`,
-							expand: "user,user.user",
-							query: {
-								groupId: localStorage.getItem("group")!,
-							},
-						});
-				});
+				await pb
+					.collection("studyuren_live")
+					.subscribe("*", async () => {
+						otherOnline = await pb
+							.collection("studyuren_live")
+							.getFullList({
+								filter: `ping > "${new Date(Date.now() - 10 * 1000).toISOString().replace("T", " ").split(".")[0]}"`,
+								expand: "user,user.user",
+								query: {
+									groupId: localStorage.getItem("group")!,
+								},
+							});
+					});
 			} catch (e) {
 				console.log("Application crashed with friendNetworkError");
 			}
@@ -271,6 +274,12 @@
 			}
 		};
 	});
+
+	$effect(() => {
+		safeOnlineUsers = (otherOnline ?? [])
+			.map((o: any) => o?.expand?.user?.expand?.user)
+			.filter((u: any) => u && u.id !== app.user.id);
+	});
 </script>
 
 {#if mounted}
@@ -330,13 +339,11 @@
 				</p>
 			{/if}
 
-			{#if otherOnline
-				.map((o: any) => o.expand?.user?.expand?.user)
-				.filter((u: any) => u?.id !== app.user.id).length > 0}
+			{#if safeOnlineUsers.length > 0}
 				<div
 					class="text-sm absolute top-16 flex gap-2 items-center justify-center
-        cursor-pointer duration-200
-        {app.running ? 'opacity-100' : 'opacity-65'}"
+		cursor-pointer duration-200
+		{app.running ? 'opacity-100' : 'opacity-65'}"
 					transition:fly={{ duration: 500, y: -5, delay: 5000 }}
 				>
 					<div
@@ -345,29 +352,14 @@
 							: ''}"
 					></div>
 
-					{#if otherOnline
-						.map((o: any) => o.expand?.user?.expand?.user)
-						.filter((u: any) => u?.id !== app.user.id).length === 1}
-						{otherOnline
-							.map((o: any) => o.expand?.user?.expand?.user)
-							.filter((u: any) => u?.id !== app.user.id)[0]
-							.username}
-						focust
+					{#if safeOnlineUsers.length === 1}
+						{safeOnlineUsers[0].username} focust
 					{:else}
-						{otherOnline
-							.map((o: any) => o.expand?.user?.expand?.user)
-							.filter((u: any) => u?.id !== app.user.id)
+						{safeOnlineUsers
 							.slice(0, -1)
 							.map((u: any) => u.username)
 							.join(", ")}
-
-						en
-						{otherOnline
-							.map((o: any) => o.expand?.user?.expand?.user)
-							.filter((u: any) => u?.id !== app.user.id)
-							.slice(-1)[0].username}
-
-						focussen
+						en {safeOnlineUsers.slice(-1)[0].username} focussen
 					{/if}
 				</div>
 			{/if}
