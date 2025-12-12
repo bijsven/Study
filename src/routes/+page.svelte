@@ -114,39 +114,40 @@
 		});
 
 		(async () => {
-			try {
-				await pb.collection("studyuren_live").create(
-					{
-						user: localStorage.getItem("user:id")!,
-						ping: new Date().toISOString(),
-					},
+			const i = await pb
+				.collection("studyuren_live")
+				.getFirstListItem(
+					"user.id = '" + localStorage.getItem("user:id") + "'",
 					{
 						query: {
 							groupId: localStorage.getItem("group")!,
 						},
 					}
 				);
-			} catch {
-				const i = await pb
-					.collection("studyuren_live")
-					.getFirstListItem(
-						"user.id = '" + localStorage.getItem("user:id") + "'",
-						{
-							query: {
-								groupId: localStorage.getItem("group")!,
-							},
-						}
-					);
-
+			if (i) {
 				await pb.collection("studyuren_live").delete(i.id, {
 					query: {
 						groupId: localStorage.getItem("group")!,
 					},
 				});
+			}
 
-				const item = await pb.collection("studyuren_live").create(
+			const item = await pb.collection("studyuren_live").create(
+				{
+					user: localStorage.getItem("user:id")!,
+					ping: new Date().toISOString(),
+				},
+				{
+					query: {
+						groupId: localStorage.getItem("group")!,
+					},
+				}
+			);
+
+			setInterval(async () => {
+				await pb.collection("studyuren_live").update(
+					item.id,
 					{
-						user: localStorage.getItem("user:id")!,
 						ping: new Date().toISOString(),
 					},
 					{
@@ -155,21 +156,7 @@
 						},
 					}
 				);
-
-				setInterval(async () => {
-					await pb.collection("studyuren_live").update(
-						item.id,
-						{
-							ping: new Date().toISOString(),
-						},
-						{
-							query: {
-								groupId: localStorage.getItem("group")!,
-							},
-						}
-					);
-				}, 5000);
-			}
+			}, 5000);
 
 			try {
 				otherOnline = await pb
@@ -213,9 +200,7 @@
 			).data;
 
 			if (sessionsData) {
-				const sessions = JSON.parse(sessionsData);
-
-				for (const session of sessions) {
+				for (const session of sessionsData) {
 					totalScore += session.score;
 				}
 			}
@@ -247,7 +232,6 @@
 		}
 
 		const delay = Math.random() * (300000 - 10000) + 10000;
-		console.log("Delay: ", delay);
 		checkInTimeout = setTimeout(() => {
 			app.CheckIn = true;
 			scheduleCheckIn();
@@ -279,8 +263,9 @@
 
 			app.counter = 0;
 			app.CheckIn = false;
-
-			document.exitFullscreen?.();
+			if (document.fullscreenElement) {
+				document.exitFullscreen?.();
+			}
 		}
 
 		return () => {
