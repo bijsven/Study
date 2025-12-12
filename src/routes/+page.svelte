@@ -114,40 +114,35 @@
 		});
 
 		(async () => {
-			const i = await pb
-				.collection("studyuren_live")
-				.getFirstListItem(
-					"user.id = '" + localStorage.getItem("user:id") + "'",
-					{
+			try {
+				let i;
+				try {
+					i = await pb
+						.collection("studyuren_live")
+						.getFirstListItem(
+							"user.id = '" +
+								localStorage.getItem("user:id") +
+								"'",
+							{
+								query: {
+									groupId: localStorage.getItem("group")!,
+								},
+							}
+						);
+				} catch (e) {
+					console.log("[Network] Record non-existend");
+				}
+				if (i) {
+					await pb.collection("studyuren_live").delete(i.id!, {
 						query: {
 							groupId: localStorage.getItem("group")!,
 						},
-					}
-				);
-			if (i) {
-				await pb.collection("studyuren_live").delete(i.id, {
-					query: {
-						groupId: localStorage.getItem("group")!,
-					},
-				});
-			}
-
-			const item = await pb.collection("studyuren_live").create(
-				{
-					user: localStorage.getItem("user:id")!,
-					ping: new Date().toISOString(),
-				},
-				{
-					query: {
-						groupId: localStorage.getItem("group")!,
-					},
+					});
 				}
-			);
 
-			setInterval(async () => {
-				await pb.collection("studyuren_live").update(
-					item.id,
+				const item = await pb.collection("studyuren_live").create(
 					{
+						user: localStorage.getItem("user:id")!,
 						ping: new Date().toISOString(),
 					},
 					{
@@ -156,9 +151,24 @@
 						},
 					}
 				);
-			}, 5000);
 
-			try {
+				setInterval(async () => {
+					await pb.collection("studyuren_live").update(
+						item.id,
+						{
+							ping: new Date().toISOString(),
+						},
+						{
+							query: {
+								groupId: localStorage.getItem("group")!,
+							},
+						}
+					);
+
+					console.log("[Network] Social ping send");
+					console.log("[Local] Current SD", safeOnlineUsers);
+				}, 5000);
+
 				otherOnline = await pb
 					.collection("studyuren_live")
 					.getFullList({
@@ -184,7 +194,12 @@
 					});
 			} catch (e) {
 				console.log("Application crashed with friendNetworkError");
+				console.error(e);
 			}
+
+			safeOnlineUsers = (otherOnline ?? [])
+				.map((o: any) => o?.expand?.user?.expand?.user)
+				.filter((u: any) => u && u.id !== app.user.id);
 		})();
 
 		(async () => {
