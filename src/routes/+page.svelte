@@ -61,7 +61,7 @@
 				},
 			});
 
-		const existing = JSON.parse(data.data || "[]") || [];
+		const existing = data.data || [];
 
 		existing.push({
 			duration: seconds,
