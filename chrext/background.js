@@ -1,4 +1,4 @@
-const ALLOWED_SITES = ["itslearning.com", "somtoday.nl", "bijsven.nl", "studygo.com"];
+const ALLOWED_SITES = ["itslearning.com", "somtoday.nl", "bijsven.nl", "studygo.com", "chatgpt.com"];
 
 let sessionActive = false;
 let studyurenTabId = null;
