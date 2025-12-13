@@ -1,28 +1,19 @@
-const ALLOWED_SITES = ["itslearning.com", "somtoday.nl", "bijsven.nl", "studygo.com", "chatgpt.com"];
+const ALLOWED_SITES = ["itslearning.com", "somtoday.nl", "bijsven.nl", "studygo.com", "chatgpt.com" ];
 
 let sessionActive = false;
 let studyurenTabId = null;
 
-// Luister naar berichten van content scripts en tabs
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-    console.log('[Background] Ontvangen:', msg.type, 'van tab', sender.tab?.id);
-
     switch (msg.type) {
         case "studyuren:extension:request":
-            // Stuur direct terug naar de tab die het vraagt
             if (sender.tab?.id) {
-                console.log('[Background] Stuur extensie response naar tab', sender.tab.id);
                 chrome.tabs.sendMessage(sender.tab.id, {
                     type: "studyuren:extension:response",
                     version: chrome.runtime.getManifest().version
-                }, () => {
-                    if (chrome.runtime.lastError) {
-                        console.log('[Background] Error bij sturen response:', chrome.runtime.lastError);
-                    }
                 });
             }
             sendResponse({ success: true });
-            return true; // Houd message channel open
+            return true;
             break;
 
         case "studyuren:start-session":
@@ -40,27 +31,23 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             break;
 
         case "studyuren:check-session":
-            // Stuur huidige status terug naar de vragende tab
             if (sender.tab?.id) {
                 sendSessionState(sender.tab.id);
             }
             break;
 
         case "studyuren:block-site":
-            // Blokkeer een site en stuur melding naar Studyuren tab
             if (sender.tab?.id) {
                 blockSiteAndNotify(sender.tab.id, msg.data?.url || sender.tab.url);
             }
             break;
             
         case "studyuren:focus-studyuren-tab":
-            // Focus op de Studyuren tab
             focusStudyurenTab();
             break;
     }
 });
 
-// Broadcast sessie status naar alle tabs (BEHALVE Studyuren zelf)
 function broadcastSessionState() {
     console.log('[Background] Broadcasting sessie status:', sessionActive ? 'START' : 'END');
     
@@ -68,34 +55,26 @@ function broadcastSessionState() {
         tabs.forEach(tab => {
             if (!tab.id) return;
             
-            // Skip de Studyuren tab zelf
             if (tab.id === studyurenTabId) {
-                console.log('[Background] Skip Studyuren tab', tab.id);
                 return;
             }
             
             chrome.tabs.sendMessage(tab.id, {
                 type: sessionActive ? "studyuren:session:start" : "studyuren:session:end"
             }, () => {
-                // Negeer errors (tab kan gesloten zijn of geen content script hebben)
                 if (chrome.runtime.lastError) return;
             });
         });
     });
 }
 
-// Stuur sessie status naar specifieke tab
 function sendSessionState(tabId) {
     if (!tabId) return;
     
-    // Als het de Studyuren tab is, stuur geen sessie status terug
     if (tabId === studyurenTabId) {
-        console.log('[Background] Skip sessie status naar Studyuren tab zelf');
         return;
     }
-    
-    console.log('[Background] Stuur sessie status naar tab', tabId, ':', sessionActive ? 'ACTIEF' : 'NIET ACTIEF');
-    
+        
     chrome.tabs.sendMessage(tabId, {
         type: sessionActive ? "studyuren:session:start" : "studyuren:session:end"
     }, () => {
@@ -103,7 +82,6 @@ function sendSessionState(tabId) {
     });
 }
 
-// Blokkeer site en stuur melding naar Studyuren
 function blockSiteAndNotify(blockedTabId, blockedUrl) {
     console.log('[Background] Blokkeren:', blockedUrl);
     
@@ -132,7 +110,7 @@ function blockSiteAndNotify(blockedTabId, blockedUrl) {
 }
 
 function focusStudyurenTab() {
-    console.log('[Background] Focus naar Studyuren tab');
+    console.log('[Background] Focus to Studyuren Tab');
     
     chrome.tabs.query({}, (tabs) => {
         const studyTab = tabs.find(t => 
@@ -142,9 +120,9 @@ function focusStudyurenTab() {
         if (studyTab && studyTab.id) {
             chrome.windows.update(studyTab.windowId, { focused: true });
             chrome.tabs.update(studyTab.id, { active: true });
-            console.log('[Background] Gefocust op tab', studyTab.id);
+            console.log('[Background] focused on tab', studyTab.id);
         } else {
-            console.log('[Background] Studyuren tab niet gevonden');
+            console.log('[Background] Studyuren tab lost.');
         }
     });
 }
@@ -158,18 +136,17 @@ setInterval(() => {
         );
 
         if (!studyTab) {
-            console.log('[Background] Studyuren tab niet gevonden, sessie stoppen');
+            console.log('[Background] Studyuren has been closed, stopping extension session.');
             sessionActive = false;
             studyurenTabId = null;
             broadcastSessionState();
         } else if (studyTab.id !== studyurenTabId) {
-            console.log('[Background] Studyuren tab ID update:', studyurenTabId, '->', studyTab.id);
+            console.log('[Background] TabID update:', studyurenTabId, '->', studyTab.id);
             studyurenTabId = studyTab.id;
         }
     });
 }, 2000);
 
-// Luister naar gesloten tabs
 chrome.tabs.onRemoved.addListener((tabId) => {
     if (tabId === studyurenTabId) {
         console.log('[Background] Studyuren tab gesloten, sessie stoppen');
@@ -197,7 +174,7 @@ function closeExistingBlockedTabs() {
                 if (url.protocol === 'chrome:' || url.protocol === 'chrome-extension:') return;
                 
                 if (!isAllowed) {
-                    console.log('[Background] Sluit bestaande niet-toegestane tab:', hostname);
+                    console.log('[Background] Closing not-allowed tab:', hostname);
                     
                     if (studyurenTabId) {
                         chrome.tabs.sendMessage(studyurenTabId, {
@@ -211,7 +188,7 @@ function closeExistingBlockedTabs() {
                     }
                 }
             } catch (e) {
-                console.log('[Background] Kan URL niet parsen:', tab.url);
+                console.log('[Background] Cant parse URL:', tab.url);
             }
         });
     });
@@ -225,10 +202,10 @@ setInterval(async () => {
 
     chrome.tabs.query({}, (tabs) => {
     if (!focusedWindow) {
-        
-        console.log('[Background] Geen gefocuste window');
+        focusStudyurenTab()
+        console.log('[Background] No focussed window');
         if (sessionActive) {
-            console.log('[Background] ⚠️ Browser window verloor focus, stop sessie');
+            console.log('[Background] Browser lost focus, stopping session.');
             const studyTab = tabs.find(t => 
                 t.url && (t.url.includes('studyuren.bijsven.nl') || t.url.includes('localhost'))
             );
@@ -246,7 +223,7 @@ setInterval(async () => {
             broadcastSessionState();
         }
     } else if (focusedWindow.id !== lastFocusedWindowId) {
-        console.log('[Background] Nieuwe gefocuste window:', focusedWindow.id);
+        console.log('[Background] Nieuw focused window:', focusedWindow.id);
         lastFocusedWindowId = focusedWindow.id;
     }
     });
