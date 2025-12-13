@@ -7,6 +7,7 @@
 	import ComponentSessioncompleteoverlay from "./component_sessioncompleteoverlay.svelte";
 	import { pb } from "$lib";
 	import ComponentRanking from "./component_ranking.svelte";
+	import ComponentExtension from "./component_extension.svelte";
 
 	let image = $state(undefined) as HTMLImageElement | undefined;
 
@@ -22,7 +23,14 @@
 
 	let showLeaderboard = $state(false);
 	let otherOnline = $state([]) as any;
-	let fivesec = $state(true);
+	let loggedintextvisible = $state(true);
+	let extensiontextvisible = $state(true);
+	let extensionConnected = $state(false);
+
+	let blockedAction = $state({
+		visible: false,
+		url: "",
+	});
 
 	let app = $state({
 		running: false,
@@ -104,13 +112,33 @@
 		});
 
 		document.addEventListener("fullscreenchange", () => {
+			if (extensionConnected) return;
+
 			if (!document.fullscreenElement) {
 				app.running = false;
 			}
 		});
 
 		window.addEventListener("blur", () => {
+			if (extensionConnected) return;
 			app.running = false;
+		});
+
+		window.addEventListener("message", (event) => {
+			if (event.data.type === "studyuren:website:blocked") {
+				blockedAction.visible = true;
+				blockedAction.url = event.data.data.url;
+
+				setTimeout(() => {
+					blockedAction.visible = false;
+					blockedAction.url = "";
+				}, 5000);
+			}
+
+			if (event.data.type === "studyuren:force-stop") {
+				console.log("[App] Force stop ontvangen van extensie");
+				app.running = false;
+			}
 		});
 
 		(async () => {
@@ -233,7 +261,11 @@
 		})();
 
 		setTimeout(() => {
-			fivesec = false;
+			loggedintextvisible = false;
+		}, 2500);
+
+		setTimeout(() => {
+			extensiontextvisible = false;
 		}, 5000);
 
 		mounted = true;
@@ -265,8 +297,10 @@
 			scheduleCheckIn();
 
 			context?.requestFullscreen?.();
+			window.postMessage({ type: "studyuren:start-session" }, "*");
 		} else {
 			saveScore(app.counter);
+			window.postMessage({ type: "studyuren:end-session" }, "*");
 
 			image?.classList.remove("animate-zoom-and-blur");
 			image?.classList.add("animate-zoomout-and-unblur");
@@ -297,6 +331,8 @@
 			.filter((u: any) => u && u.id !== app.user.id);
 	});
 </script>
+
+<ComponentExtension bind:extConnected={extensionConnected} />
 
 {#if mounted}
 	<content
@@ -344,7 +380,7 @@
 				>
 					Inloggen met Tussenuren
 				</a>
-			{:else if fivesec}
+			{:else if loggedintextvisible}
 				<p
 					class="text-sm absolute top-16 duration-200
 				{app.running ? 'opacity-0' : 'opacity-45'}"
@@ -353,14 +389,37 @@
 				>
 					Ingelogd als {app.user.name}
 				</p>
-			{/if}
-
-			{#if safeOnlineUsers.length > 0}
+			{:else if extensiontextvisible && extensionConnected}
+				<div
+					class="text-sm absolute top-16 duration-200 flex gap-2 items-center justify-center
+					{app.running ? 'opacity-0' : 'opacity-45'}"
+					in:fly={{ duration: 500, y: -5, delay: 250 }}
+					out:fly={{ duration: 500, y: -5 }}
+				>
+					<div
+						class="size-2 bg-emerald-500 rounded-full animate-pulse"
+					></div>
+					Extension verbonden
+				</div>
+			{:else if blockedAction.visible}
+				<div
+					class="text-sm absolute top-16 duration-200 flex gap-2 items-center justify-center
+					{app.running ? 'opacity-0' : 'opacity-65'}"
+					in:fly={{ duration: 500, y: -5, delay: 250 }}
+					out:fly={{ duration: 500, y: -5 }}
+				>
+					<div
+						class="size-2 bg-red-500 rounded-full animate-pulse"
+					></div>
+					Website geblokkeerd ({new URL(blockedAction.url).hostname})
+				</div>
+			{:else if safeOnlineUsers.length > 0}
 				<div
 					class="text-sm absolute top-16 flex gap-2 items-center justify-center
 		cursor-pointer duration-200
 		{app.running ? 'opacity-100' : 'opacity-65'}"
-					transition:fly={{ duration: 500, y: -5, delay: 5000 }}
+					in:fly={{ duration: 500, y: -5, delay: 250 }}
+					out:fly={{ duration: 500, y: -5 }}
 				>
 					<div
 						class="size-2 bg-emerald-500 rounded-full {app.running
@@ -384,8 +443,8 @@
 				onclick={() => {
 					showLeaderboard = !showLeaderboard;
 				}}
-				class="text-sm absolute bottom-30 z-10 hover:opacity-100 cursor-pointer duration-200
-				{app.running ? 'opacity-0' : 'opacity-45'}"
+				class="text-sm absolute bottom-30 z-10 cursor-pointer duration-200
+				{app.running ? 'opacity-0' : 'opacity-45 hover:opacity-100'}"
 				in:fly={{ duration: 500, y: -5, delay: 1000 }}
 			>
 				<NumberFlow value={scoreShow} /> XP
@@ -411,22 +470,22 @@
 			>
 				Tik om te starten
 			</button>
-		</div>
 
-		{#if showLeaderboard}
-			<ComponentRanking callback={() => (showLeaderboard = false)} />
-		{/if}
+			{#if showLeaderboard}
+				<ComponentRanking callback={() => (showLeaderboard = false)} />
+			{/if}
 
-		{#if showOverlay}
-			<ComponentSessioncompleteoverlay
-				amount={finalScore}
-				callback={() => {
-					showOverlay = false;
-				}}
-				multiplier={multiplier_used}
-			/>
-		{/if}
-	</content>
+			{#if showOverlay}
+				<ComponentSessioncompleteoverlay
+					amount={finalScore}
+					callback={() => {
+						showOverlay = false;
+					}}
+					multiplier={multiplier_used}
+				/>
+			{/if}
+		</div></content
+	>
 {/if}
 
 <style>
