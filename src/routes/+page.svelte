@@ -1,13 +1,15 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { fly } from "svelte/transition";
+	import { fade, fly } from "svelte/transition";
 
 	import NumberFlow from "@number-flow/svelte";
 	import CheckIn from "./component_checkin.svelte";
 	import ComponentSessioncompleteoverlay from "./component_sessioncompleteoverlay.svelte";
 	import { pb } from "$lib";
 	import ComponentRanking from "./component_ranking.svelte";
+
 	import ComponentExtension from "./component_extension.svelte";
+	import { cubicOut } from "svelte/easing";
 
 	let image = $state(undefined) as HTMLImageElement | undefined;
 
@@ -26,6 +28,9 @@
 	let loggedintextvisible = $state(true);
 	let extensiontextvisible = $state(true);
 	let extensionConnected = $state(false);
+	let showExtensionHint = $state(false);
+	let showExtensionInstructions = $state(false);
+	let showExtensionUseHint = $state(true);
 
 	let blockedAction = $state({
 		visible: false,
@@ -192,9 +197,6 @@
 							},
 						}
 					);
-
-					console.log("[Network] Social ping send");
-					console.log("[Local] Current SD", safeOnlineUsers);
 				}, 5000);
 
 				otherOnline = await pb
@@ -269,6 +271,13 @@
 		}, 5000);
 
 		mounted = true;
+
+		return () => {
+			clearInterval(interval_counter);
+			if (checkInTimeout) {
+				clearTimeout(checkInTimeout);
+			}
+		};
 	});
 
 	let checkInTimeout: number | undefined;
@@ -280,21 +289,29 @@
 
 		const delay = Math.random() * (300000 - 10000) + 10000;
 		checkInTimeout = setTimeout(() => {
+			var audio = new Audio("/assets/notification.mp3");
+			audio.play();
 			app.CheckIn = true;
 			scheduleCheckIn();
 		}, delay);
 	}
 
 	$effect(() => {
-		if (app.running) {
+		const running = app.running;
+
+		if (running) {
+			if (!localStorage.getItem("hint:extension")) {
+				localStorage.setItem("hint:extension", "true");
+				showExtensionHint = true;
+			}
 			image?.classList.remove("animate-zoomout-and-unblur");
 			image?.classList.add("animate-zoom-and-blur");
+
+			scheduleCheckIn();
 
 			interval_counter = setInterval(() => {
 				app.counter++;
 			}, 1000);
-
-			scheduleCheckIn();
 
 			context?.requestFullscreen?.();
 			window.postMessage({ type: "studyuren:start-session" }, "*");
@@ -316,13 +333,6 @@
 				document.exitFullscreen?.();
 			}
 		}
-
-		return () => {
-			clearInterval(interval_counter);
-			if (checkInTimeout) {
-				clearTimeout(checkInTimeout);
-			}
-		};
 	});
 
 	$effect(() => {
@@ -360,6 +370,89 @@
 				:{#if formatTime(app.counter)["s"] < 10}0{/if}
 				<NumberFlow value={formatTime(app.counter)["s"]} />
 			</div>
+
+			{#if showExtensionHint}
+				<div
+					class="backdrop-blur-xl bg-black/75 absolute top-0 left-0 h-full w-full"
+					transition:fade={{ duration: 500 }}
+				></div>
+				<div
+					in:fly={{ duration: 500, y: -10, easing: cubicOut }}
+					out:fly={{ duration: 500, y: 10 }}
+					class="absolute top-[50%] left-[50%] translate-x-[-50%] z-40 translate-y-[-50%] flex flex-col items-center gap-4 px-6 py-8 max-w-md w-full"
+				>
+					<div class="flex items-center gap-2 text-white text-2xl">
+						<h1 class="font-semibold">Studyuren Companion</h1>
+					</div>
+					<p class="text-white/50 text-sm text-center">
+						Het lijkt erop dat je Studyuren Companion niet hebt
+						geinstalleerd. Wil je deze installeren? Studyuren
+						Companion laat verschillende websites toe terwijl je
+						beter bent met het studeren.
+					</p>
+					<div class="flex gap-5 items-center justify-center">
+						<button
+							class="text-white/65 hover:text-white cursor-pointer duration-300 text-sm text-center"
+							onclick={() => {
+								app.running = false;
+								showExtensionHint = false;
+								showExtensionInstructions = true;
+							}}
+						>
+							Extensie installeren
+						</button>
+						<button
+							class="text-white/65 hover:text-white cursor-pointer duration-300 text-sm text-center"
+							onclick={() => {
+								showExtensionHint = false;
+							}}
+						>
+							Nee, bedankt.
+						</button>
+					</div>
+				</div>
+			{/if}
+
+			{#if showExtensionInstructions}
+				<div
+					class="backdrop-blur-xl bg-black/75 absolute top-0 left-0 h-full w-full"
+					transition:fade={{ duration: 500 }}
+				></div>
+				<div
+					in:fly={{ duration: 500, y: -10, easing: cubicOut }}
+					out:fly={{ duration: 500, y: 10 }}
+					class="absolute top-[50%] left-[50%] translate-x-[-50%] z-40 translate-y-[-50%] flex flex-col items-center gap-4 px-6 py-8 max-w-md w-full"
+				>
+					<div class="flex items-left gap-2 text-white text-2xl">
+						<h1 class="font-semibold">
+							Installatie van Studyuren Companion
+						</h1>
+					</div>
+					<p class="text-white/50 text-sm text-left">
+						1. Installeer de zip vanaf deze <a
+							class="underline text-white/70 hover:text-white"
+							href="/assets/download/studyuren-companion.zip"
+						>
+							link
+						</a>.<br /> 2. Extract de inhoud van de ZIP en plaats de
+						map in Documenten.<br /> 3. Ga naar chrome://extensions
+						en klik op "Developer mode" aan de rechterkant.<br /> 4.
+						Klik op "Load unpacked" en selecteer de map waar je de
+						map "studyuren-companion" hebt geplaatst.<br /> 5. Je hebt
+						nu Studyuren Companion geinstalleerd!
+					</p>
+					<div class="flex gap-5 items-center justify-center">
+						<button
+							class="text-white/65 hover:text-white cursor-pointer duration-300 text-sm text-center"
+							onclick={() => {
+								window.location.reload();
+							}}
+						>
+							Klaar!
+						</button>
+					</div>
+				</div>
+			{/if}
 
 			<div class="mt-52">
 				{#if app.CheckIn}
@@ -400,6 +493,15 @@
 						class="size-2 bg-emerald-500 rounded-full animate-pulse"
 					></div>
 					Extension verbonden
+				</div>
+			{:else if extensionConnected && app.running && (setTimeout(() => (showExtensionUseHint = false), 2500), true) && showExtensionUseHint}
+				<div
+					class="text-sm absolute top-16 duration-200 flex gap-2 items-center justify-center
+					{app.running ? 'opacity-100' : 'opacity-45'}"
+					in:fly={{ duration: 500, y: -5, delay: 250 }}
+					out:fly={{ duration: 500, y: -5 }}
+				>
+					Druk op ESC om je browser te gebruiken
 				</div>
 			{:else if blockedAction.visible}
 				<div
