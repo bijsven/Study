@@ -5,7 +5,7 @@
 	import Award from "@lucide/svelte/icons/award";
 	import X from "@lucide/svelte/icons/x";
 	import { cubicOut } from "svelte/easing";
-	import { fly } from "svelte/transition";
+	import { fade, fly } from "svelte/transition";
 	import { onMount } from "svelte";
 	import { pb } from "$lib";
 	import NumberFlow, { continuous } from "@number-flow/svelte";
@@ -27,7 +27,20 @@
 	let activeTab = $state<TimeFrame>("all");
 	let allData = $state<any[]>([]);
 
+	let groupName = $state("Leaderboard");
+
 	onMount(async () => {
+		groupName =
+			(
+				await pb
+					.collection("groups")
+					.getOne(localStorage.getItem("group")!, {
+						query: {
+							groupId: localStorage.getItem("group")!,
+						},
+					})
+			).name || "Leaderboard";
+
 		try {
 			const groupId = localStorage.getItem("group");
 			if (!groupId) {
@@ -56,12 +69,16 @@
 		if (timeFrame === "all") return data;
 
 		const now = new Date();
-		const cutoffDate = new Date();
+		let startDate: Date;
 
 		if (timeFrame === "week") {
-			cutoffDate.setDate(now.getDate() - 7);
+			const day = now.getDay();
+			const diff = day === 0 ? 6 : day - 1;
+			startDate = new Date(now);
+			startDate.setDate(now.getDate() - diff);
+			startDate.setHours(0, 0, 0, 0);
 		} else if (timeFrame === "month") {
-			cutoffDate.setMonth(now.getMonth() - 1);
+			startDate = new Date(now.getFullYear(), now.getMonth(), 1);
 		}
 
 		return data.map((record: any) => {
@@ -70,7 +87,7 @@
 			const filteredSessions = record.data.filter((session: any) => {
 				if (!session.date) return false;
 				const sessionDate = new Date(session.date);
-				return sessionDate >= cutoffDate;
+				return sessionDate >= startDate;
 			});
 
 			return {
@@ -105,12 +122,14 @@
 					visible: false,
 				};
 			})
-			.filter((player) => player.xp > 0)
 			.sort((a, b) => b.xp - a.xp);
 	}
 
 	function setActiveTab(tab: TimeFrame) {
+		if (activeTab == tab) return;
 		activeTab = tab;
+
+		players = [];
 		updatePlayersList(tab);
 	}
 
@@ -148,15 +167,28 @@
 	tabindex="0"
 	in:fly={{ duration: 650, y: -10, easing: cubicOut }}
 	out:fly={{ duration: 450, y: 10 }}
-	class="absolute top-0 left-0 h-full w-full flex z-50 bg-black/30 backdrop-blur-xl justify-center items-center"
+	class="absolute top-0 left-0 h-full w-full flex z-50 overflow-hidden bg-black/30 backdrop-blur-xl justify-center items-center"
 >
 	<div class="flex flex-col items-center gap-6 max-w-md w-full px-6">
-		<div class="flex items-center justify-center gap-2 text-white text-2xl">
-			<h1 class="font-semibold">Leaderboard</h1>
+		<div
+			class="flex flex-col items-center justify-center gap-2 text-white text-2xl"
+		>
+			<p
+				in:fly={{ duration: 650, y: -10, easing: cubicOut, delay: 350 }}
+				class="text-xs opacity-45 -mb-2"
+			>
+				Leaderboard
+			</p>
+			<h1
+				in:fly={{ duration: 800, y: -10, easing: cubicOut, delay: 500 }}
+				class="font-semibold"
+			>
+				{groupName}
+			</h1>
 		</div>
 
-		<!-- Tab Navigation -->
 		<div
+			in:fly={{ duration: 250, y: -10, easing: cubicOut, delay: 650 }}
 			class="flex gap-2 w-full rounded-xl bg-white/5 p-1 border border-white/10"
 			onclick={(e) => {
 				e.stopPropagation();
@@ -179,9 +211,9 @@
 						: 'text-white/50 hover:bg-white/5 hover:text-white/70'}"
 				>
 					{#if tab === "week"}
-						<span>Weekelijks</span>
+						<span>Deze week</span>
 					{:else if tab === "month"}
-						<span>Maandelijks</span>
+						<span>Deze maand</span>
 					{:else if tab === "all"}
 						<span>Altijd</span>
 					{/if}
@@ -190,14 +222,15 @@
 		</div>
 
 		{#if loading}
-			<div class="text-white/50 text-sm">Laden...</div>
-		{:else if players.length === 0}
-			<div class="text-white/50 text-sm">
-				Nog geen spelers in deze periode
-			</div>
-		{:else}
-			<div class="w-full space-y-2">
-				{#each players as player, i}
+			<div
+				in:fade={{
+					duration: 1000,
+					easing: cubicOut,
+					delay: 1000,
+				}}
+				class="w-full space-y-2 overflow-y-auto min-h-32 max-h-64 pr-2 simplescrollbar self-start shrink-0"
+			>
+				{#each Array(10) as _, i}
 					<div
 						in:fly|global={{
 							duration: 650,
@@ -205,54 +238,86 @@
 							easing: cubicOut,
 							delay: i * 100,
 						}}
-						class="flex items-center gap-4 px-4 py-3 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10"
-					>
-						<div
-							class="shrink-0 w-6 flex items-center justify-center"
-						>
-							{#if getRankIcon(i + 1)}
-								{@const IconComponent = getRankIcon(i + 1)}
-								{#if i === 0}
-									<IconComponent
-										class="w-5 h-5 text-amber-300"
-										fill="oklch(87.9% 0.169 91.605)"
-									/>
-								{:else if i === 1}
-									<IconComponent
-										class="w-5 h-5 text-slate-300"
-									/>
-								{:else}
-									<IconComponent
-										class="w-5 h-5 text-amber-700"
-									/>
-								{/if}
-							{:else}
-								<span class="text-white/40 text-sm font-medium">
-									{i + 1}
-								</span>
-							{/if}
-						</div>
-
-						<div class="flex-1 min-w-0">
-							<p
-								class="text-white text-sm font-medium truncate text-left"
-							>
-								{player.name}
-							</p>
-						</div>
-
-						<div class="flex items-center gap-1.5 text-amber-300">
-							<Zap
-								class="w-3.5 h-3.5"
-								fill="oklch(87.9% 0.169 91.605)"
-							/>
-							<NumberFlow
-								value={player.xp}
-								class="text-sm font-semibold"
-							></NumberFlow>
-						</div>
-					</div>
+						class="flex items-center animate-pulse gap-4 px-4 py-3 h-14 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10"
+					></div>
 				{/each}
+			</div>
+		{:else if players.length === 0}
+			<div class="text-white/50 text-sm">
+				Nog geen spelers in deze periode
+			</div>
+		{:else}
+			<div
+				in:fly={{
+					duration: 450,
+					y: -10,
+					easing: cubicOut,
+					delay: 650,
+				}}
+				class="w-full space-y-2 overflow-y-auto min-h-32 max-h-64 pr-2 simplescrollbar self-start shrink-0"
+			>
+				{#key players}
+					{#each players as player, i}
+						<div
+							in:fly|global={{
+								duration: 650,
+								y: -10,
+								easing: cubicOut,
+								delay: i * 100,
+							}}
+							class="flex items-center gap-4 px-4 py-3 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10"
+						>
+							<div
+								class="shrink-0 w-6 flex items-center justify-center"
+							>
+								{#if getRankIcon(i + 1)}
+									{@const IconComponent = getRankIcon(i + 1)}
+									{#if i === 0}
+										<IconComponent
+											class="w-5 h-5 text-amber-300"
+											fill="oklch(87.9% 0.169 91.605)"
+										/>
+									{:else if i === 1}
+										<IconComponent
+											class="w-5 h-5 text-slate-300"
+										/>
+									{:else}
+										<IconComponent
+											class="w-5 h-5 text-amber-700"
+										/>
+									{/if}
+								{:else}
+									<span
+										class="text-white/40 text-sm font-medium"
+									>
+										{i + 1}
+									</span>
+								{/if}
+							</div>
+
+							<div class="flex-1 min-w-0">
+								<p
+									class="text-white text-sm font-medium truncate text-left"
+								>
+									{player.name}
+								</p>
+							</div>
+
+							<div
+								class="flex items-center gap-1.5 text-amber-300"
+							>
+								<Zap
+									class="w-3.5 h-3.5"
+									fill="oklch(87.9% 0.169 91.605)"
+								/>
+								<NumberFlow
+									value={player.xp}
+									class="text-sm font-semibold"
+								></NumberFlow>
+							</div>
+						</div>
+					{/each}
+				{/key}
 			</div>
 		{/if}
 
@@ -265,3 +330,23 @@
 		>
 	</div>
 </div>
+
+<style>
+	.simplescrollbar {
+		scrollbar-width: thin;
+		scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
+	}
+
+	.simplescrollbar::-webkit-scrollbar {
+		width: 8px;
+	}
+
+	.simplescrollbar::-webkit-scrollbar-track {
+		background: rgba(255, 255, 255, 0.05);
+	}
+
+	.simplescrollbar::-webkit-scrollbar-thumb {
+		background: rgba(255, 255, 255, 0.2);
+		border-radius: 9999px;
+	}
+</style>
