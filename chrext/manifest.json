@@ -7,10 +7,12 @@
         "tabs",
         "activeTab",
         "windows",
-        "idle"
+        "idle",
+        "https://studyuren.bijsven.nl/*"
     ],
     "background": {
-        "service_worker": "background.js"
+        "service_worker": "background.js",
+        "type": "module"
     },
     "content_scripts": [
         {
