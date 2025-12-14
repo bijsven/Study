@@ -506,7 +506,7 @@
 			{:else if blockedAction.visible}
 				<div
 					class="text-sm absolute top-16 duration-200 flex gap-2 items-center justify-center
-					{app.running ? 'opacity-0' : 'opacity-65'}"
+					{app.running ? 'opacity-65' : 'opacity-0'}"
 					in:fly={{ duration: 500, y: -5, delay: 250 }}
 					out:fly={{ duration: 500, y: -5 }}
 				>

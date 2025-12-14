@@ -165,8 +165,8 @@
 <div
 	role="button"
 	tabindex="0"
-	in:fly={{ duration: 650, y: -10, easing: cubicOut }}
-	out:fly={{ duration: 450, y: 10 }}
+	in:fade={{ duration: 650, easing: cubicOut }}
+	out:fade={{ duration: 450 }}
 	class="absolute top-0 left-0 h-full w-full flex z-50 overflow-hidden bg-black/30 backdrop-blur-xl justify-center items-center"
 >
 	<div class="flex flex-col items-center gap-6 max-w-md w-full px-6">
