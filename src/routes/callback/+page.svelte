@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import { goto } from "$app/navigation";
-	import { page } from "$app/stores";
 	import { pb } from "$lib";
+	import { fly } from "svelte/transition";
 
 	let fase = $state(0);
-	let user = $state() as any;
+	let user = $state<any>();
 
 	onMount(async () => {
 		const params = new URLSearchParams(window.location.search);
@@ -18,6 +18,7 @@
 		if (!user) return;
 
 		let record;
+
 		try {
 			record = await pb.collection("studyuren").create(
 				{
@@ -32,7 +33,7 @@
 				}
 			);
 		} catch (e) {
-			console.log("user already exist, falling back");
+			console.log("User already exists, falling back...");
 
 			record = await pb
 				.collection("studyuren")
@@ -42,20 +43,6 @@
 					},
 				});
 		}
-		fase = 3;
-
-		await pb.collection("studyuren").update(
-			record?.id!,
-			{
-				data: localStorage.getItem("sessions"),
-			},
-			{
-				query: {
-					groupId: user.group,
-				},
-			}
-		);
-
 		fase = 4;
 
 		localStorage.setItem("user", user.id);
@@ -69,23 +56,21 @@
 	});
 </script>
 
-{#if fase >= 0}
-	<p>Loaded OK</p>
-{/if}
-{#if fase >= 1}
-	<p>
-		User {new URLSearchParams(window.location.search).get("userid")}... OK
-	</p>
-{/if}
-{#if fase >= 2}
-	<p>Hi, {user.username}</p>
-{/if}
-{#if fase >= 3}
-	<p>Creating new profile and matching data... OK</p>
-{/if}
-{#if fase >= 4}
-	<p>Syncing data with the server... OK</p>
-{/if}
-{#if fase >= 5}
-	<p>Done!</p>
-{/if}
+<div class="flex justify-center items-center absolute bg-black h-full w-full">
+	<div>
+		<h1
+			in:fly={{ duration: 500, y: 20 }}
+			out:fly={{ duration: 500, y: -20, delay: 250 }}
+			class="text-3xl font-semibold text-white falt"
+		>
+			Tussenuren
+		</h1>
+		<p
+			in:fly={{ duration: 500, y: 10, delay: 250 }}
+			out:fly={{ duration: 500, y: -10 }}
+			class="falt text-right opacity-65 text-white text-xs"
+		>
+			Connecting w/ Studyuren ({fase} / 5)
+		</p>
+	</div>
+</div>
