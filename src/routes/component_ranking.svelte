@@ -69,17 +69,6 @@
 		if (timeFrame === "all") return data;
 
 		const now = new Date();
-		let startDate: Date;
-
-		if (timeFrame === "week") {
-			const day = now.getDay();
-			const diff = day === 0 ? 6 : day - 1;
-			startDate = new Date(now);
-			startDate.setDate(now.getDate() - diff);
-			startDate.setHours(0, 0, 0, 0);
-		} else if (timeFrame === "month") {
-			startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-		}
 
 		return data.map((record: any) => {
 			if (!Array.isArray(record.data)) return record;
@@ -87,7 +76,22 @@
 			const filteredSessions = record.data.filter((session: any) => {
 				if (!session.date) return false;
 				const sessionDate = new Date(session.date);
-				return sessionDate >= startDate;
+
+				if (timeFrame === "week") {
+					const dayOfWeek = now.getDay() === 0 ? 6 : now.getDay() - 1; // maandag = 0
+					const startOfWeek = new Date(now);
+					startOfWeek.setDate(now.getDate() - dayOfWeek);
+					startOfWeek.setHours(0, 0, 0, 0);
+
+					return sessionDate >= startOfWeek;
+				} else if (timeFrame === "month") {
+					return (
+						sessionDate.getFullYear() === now.getFullYear() &&
+						sessionDate.getMonth() === now.getMonth()
+					);
+				}
+
+				return true;
 			});
 
 			return {
