@@ -66,31 +66,27 @@
 	});
 
 	function filterDataByTimeFrame(data: any[], timeFrame: TimeFrame) {
-		if (timeFrame === "all") return data;
-
 		const now = new Date();
 
-		return data.map((record: any) => {
+		return data.map((record) => {
 			if (!Array.isArray(record.data)) return record;
 
 			const filteredSessions = record.data.filter((session: any) => {
 				if (!session.date) return false;
-				const sessionDate = new Date(session.date);
+				const d = new Date(session.date);
 
 				if (timeFrame === "week") {
-					const dayOfWeek = now.getDay() === 0 ? 6 : now.getDay() - 1; // maandag = 0
+					const dayOfWeek = now.getDay() === 0 ? 6 : now.getDay() - 1;
 					const startOfWeek = new Date(now);
 					startOfWeek.setDate(now.getDate() - dayOfWeek);
 					startOfWeek.setHours(0, 0, 0, 0);
-
-					return sessionDate >= startOfWeek;
+					return d >= startOfWeek;
 				} else if (timeFrame === "month") {
 					return (
-						sessionDate.getFullYear() === now.getFullYear() &&
-						sessionDate.getMonth() === now.getMonth()
-					);
+						d.getFullYear() === now.getFullYear() &&
+						d.getMonth() === now.getMonth()
+					); // !!! dit zorgt voor maandfilter
 				}
-
 				return true;
 			});
 
