@@ -9,6 +9,7 @@
 	import { onMount } from "svelte";
 	import { pb } from "$lib";
 	import NumberFlow, { continuous } from "@number-flow/svelte";
+	import { Confetti } from "svelte-confetti";
 
 	interface Player {
 		id: string;
@@ -24,10 +25,11 @@
 
 	let players = $state<Player[]>([]);
 	let loading = $state(true);
-	let activeTab = $state<TimeFrame>("all");
+	let activeTab = $state<TimeFrame>("week");
 	let allData = $state<any[]>([]);
 
 	let groupName = $state("Leaderboard");
+	let showConfetti = $state(false);
 
 	onMount(async () => {
 		groupName =
@@ -57,7 +59,7 @@
 			});
 
 			allData = data;
-			updatePlayersList("all");
+			updatePlayersList("week");
 		} catch (error) {
 			console.error("Fout bij ophalen leaderboard:", error);
 		} finally {
@@ -67,13 +69,28 @@
 
 	function filterDataByTimeFrame(data: any[], timeFrame: TimeFrame) {
 		const now = new Date();
+		now.setHours(0, 0, 0, 0);
 
 		return data.map((record) => {
 			if (!Array.isArray(record.data)) return record;
 
 			const filteredSessions = record.data.filter((session: any) => {
 				if (!session.date) return false;
-				const d = new Date(session.date);
+
+				let timestamp = session.date;
+				if (timestamp < 946684800000) {
+					timestamp = timestamp * 1000;
+				}
+
+				const d = new Date(timestamp);
+
+				if (isNaN(d.getTime()) || d > new Date()) {
+					console.warn(
+						"Ongeldige of toekomstige datum:",
+						session.date
+					);
+					return false;
+				}
 
 				if (timeFrame === "week") {
 					const dayOfWeek = now.getDay() === 0 ? 6 : now.getDay() - 1;
@@ -82,10 +99,15 @@
 					startOfWeek.setHours(0, 0, 0, 0);
 					return d >= startOfWeek;
 				} else if (timeFrame === "month") {
+					const sessionYear = d.getFullYear();
+					const sessionMonth = d.getMonth();
+					const currentYear = now.getFullYear();
+					const currentMonth = now.getMonth();
+
 					return (
-						d.getFullYear() === now.getFullYear() &&
-						d.getMonth() === now.getMonth()
-					); // !!! dit zorgt voor maandfilter
+						sessionYear === currentYear &&
+						sessionMonth === currentMonth
+					);
 				}
 				return true;
 			});
@@ -123,6 +145,15 @@
 				};
 			})
 			.sort((a, b) => b.xp - a.xp);
+
+		if (
+			players.length > 0 &&
+			players[0].id === localStorage.getItem("user:id")
+		) {
+			showConfetti = true;
+		} else {
+			showConfetti = false;
+		}
 	}
 
 	function setActiveTab(tab: TimeFrame) {
@@ -170,6 +201,21 @@
 	class="absolute top-0 left-0 h-full w-full flex z-50 overflow-hidden bg-black/30 backdrop-blur-xl justify-center items-center"
 >
 	<div class="flex flex-col items-center gap-6 max-w-md w-full px-6">
+		{#key players}
+			{#if showConfetti}
+				<div class="absolute">
+					<Confetti
+						x={[-2, 2]}
+						delay={[1000, 2000]}
+						duration={2000}
+						amount={250}
+						size={15}
+						fallDistance="100vh"
+					/>
+				</div>
+			{/if}
+		{/key}
+
 		<div
 			class="flex flex-col items-center justify-center gap-2 text-white text-2xl"
 		>
@@ -265,7 +311,10 @@
 								easing: cubicOut,
 								delay: i * 100,
 							}}
-							class="flex items-center gap-4 px-4 py-3 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10"
+							class="flex items-center gap-4 px-4 py-3 rounded-xl bg-white/5 backdrop-blur-sm border {player.id ===
+							localStorage.getItem('user:id')
+								? 'border-white/25'
+								: 'border-white/10'}"
 						>
 							<div
 								class="shrink-0 w-6 flex items-center justify-center"

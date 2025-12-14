@@ -18,11 +18,13 @@
 		"@tailwindcss/vite": "^4.1.17",
 		"svelte": "^5.43.8",
 		"svelte-check": "^4.3.4",
+		"svelte-confetti": "^2.0.0",
 		"tailwindcss": "^4.1.17",
 		"typescript": "^5.9.3",
 		"vite": "^7.2.2"
 	},
 	"dependencies": {
+		"@hiseb/confetti": "^2.1.0",
 		"@lucide/svelte": "^0.556.0",
 		"@number-flow/svelte": "^0.3.9",
 		"lucide-svelte": "^0.556.0",
