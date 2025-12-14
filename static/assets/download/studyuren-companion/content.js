@@ -217,20 +217,16 @@ function createFocusOverlay() {
 
 
 if (!isStudyurenPage && !isAllowedSite()) {
-    
-    
-    
     chrome.runtime.sendMessage({ type: "studyuren:check-session" });
     
-    
     setTimeout(() => {
-        
         if (sessionActive) {
-            
             chrome.runtime.sendMessage({
                 type: "studyuren:block-site",
                 data: { url: window.location.href }
             });
         }
     }, 500);
+} else {
+    
 }

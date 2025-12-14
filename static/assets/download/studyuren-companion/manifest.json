@@ -1,18 +1,16 @@
 {
     "manifest_version": 3,
     "name": "Studyuren Companion",
-    "version": "0.0.7",
+    "version": "0.1.0",
     "description": "Studyuren Companion om extra te kunnen doen terwijl je aan het focussen bent.",
     "permissions": [
         "tabs",
         "activeTab",
         "windows",
-        "idle",
-        "https://studyuren.bijsven.nl/*"
+        "idle"
     ],
     "background": {
-        "service_worker": "background.js",
-        "type": "module"
+        "service_worker": "background.js"
     },
     "content_scripts": [
         {
