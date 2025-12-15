@@ -49,6 +49,15 @@
 		background: "nature.jpg",
 	});
 
+let sessionStartedAt = $state<number | null>(null);
+let checkInState = $state({
+	active: false,
+	duration: 10,
+	startedAt: 0,
+	remaining: 10,
+});
+let checkInInterval: number | undefined;
+
 	const formatTime = (time: number) => {
 		const h = Math.floor(time / 3600);
 		const m = Math.floor((time % 3600) / 60);
@@ -56,6 +65,15 @@
 
 		return { h, m, s };
 	};
+
+	function syncTimerWithStart() {
+		if (!sessionStartedAt) return;
+
+		app.counter = Math.max(
+			0,
+			Math.floor((Date.now() - sessionStartedAt) / 1000)
+		);
+	}
 
 	async function saveScore(seconds: number) {
 		if (seconds < 15) {
@@ -113,7 +131,7 @@
 
 		window.addEventListener("mousemove", () => {
 			if (hasFocus()) {
-				app.CheckIn = false;
+				resolveCheckIn(true);
 			}
 		});
 
@@ -147,7 +165,7 @@
 			}
 
 			if (event.data.type === "studyuren:session:active") {
-				app.CheckIn = false;
+				resolveCheckIn(true);
 				if (checkInTimeout) clearTimeout(checkInTimeout);
 				scheduleCheckIn();
 			}
@@ -286,21 +304,86 @@
 			if (checkInTimeout) {
 				clearTimeout(checkInTimeout);
 			}
+			clearCheckInInterval();
 		};
 	});
 
 	let checkInTimeout: number | undefined;
 
+	function clearCheckInInterval() {
+		if (checkInInterval) {
+			clearInterval(checkInInterval);
+		}
+	}
+
+	function triggerCheckIn(duration = 10) {
+		if (checkInTimeout) {
+			clearTimeout(checkInTimeout);
+		}
+
+		const startedAt = Date.now();
+
+		checkInState.active = true;
+		checkInState.duration = duration;
+		checkInState.startedAt = startedAt;
+		checkInState.remaining = duration;
+		app.CheckIn = true;
+
+		window.postMessage(
+			{ type: "studyuren:check-in-start", duration, startedAt },
+			"*"
+		);
+
+		clearCheckInInterval();
+		checkInInterval = setInterval(() => {
+			const remaining = Math.max(
+				0,
+				Math.ceil(duration - (Date.now() - startedAt) / 1000)
+			);
+
+			checkInState.remaining = remaining;
+			app.CheckIn = checkInState.active;
+
+			if (remaining <= 0) {
+				resolveCheckIn(false);
+			}
+		}, 250);
+	}
+
+	function resolveCheckIn(successful: boolean) {
+		if (!checkInState.active) {
+			return;
+		}
+
+		checkInState.active = false;
+		app.CheckIn = false;
+		checkInState.remaining = checkInState.duration;
+
+		window.postMessage({ type: "studyuren:check-in-end" }, "*");
+
+		clearCheckInInterval();
+
+		if (!successful) {
+			app.running = false;
+		}
+	}
+
 	function scheduleCheckIn() {
+		if (!app.running) {
+			return;
+		}
+
 		if (checkInTimeout) {
 			clearTimeout(checkInTimeout);
 		}
 
 		const delay = Math.random() * (300000 - 10000) + 10000;
 		checkInTimeout = setTimeout(() => {
-			var audio = new Audio("/assets/notification.mp3");
+			if (!app.running) return;
+
+			const audio = new Audio("/assets/notification.mp3");
 			audio.play();
-			app.CheckIn = true;
+			triggerCheckIn();
 			scheduleCheckIn();
 		}, delay);
 	}
@@ -309,6 +392,11 @@
 		const running = app.running;
 
 		if (running) {
+		if (!sessionStartedAt) {
+			sessionStartedAt = Date.now();
+			app.counter = 0;
+		}
+
 			if (!localStorage.getItem("hint:extension")) {
 				localStorage.setItem("hint:extension", "true");
 				showExtensionHint = true;
@@ -319,12 +407,19 @@
 			scheduleCheckIn();
 
 			interval_counter = setInterval(() => {
-				app.counter++;
+			syncTimerWithStart();
 			}, 1000);
 
 			context?.requestFullscreen?.();
-			window.postMessage({ type: "studyuren:start-session" }, "*");
+		window.postMessage(
+			{ type: "studyuren:start-session", startedAt: sessionStartedAt },
+			"*"
+		);
 		} else {
+		if (sessionStartedAt) {
+			syncTimerWithStart();
+		}
+
 			saveScore(app.counter);
 			window.postMessage({ type: "studyuren:end-session" }, "*");
 
@@ -335,9 +430,12 @@
 			if (checkInTimeout) {
 				clearTimeout(checkInTimeout);
 			}
+		clearCheckInInterval();
 
 			app.counter = 0;
-			app.CheckIn = false;
+		app.CheckIn = false;
+		checkInState.active = false;
+		sessionStartedAt = null;
 			if (document.fullscreenElement) {
 				document.exitFullscreen?.();
 			}
@@ -508,11 +606,11 @@
 			{/if}
 
 			<div class="mt-52">
-				{#if app.CheckIn}
+				{#if checkInState.active}
 					<CheckIn
-						callback={() => {
-							app.running = false;
-						}}
+						duration={checkInState.duration}
+						remaining={checkInState.remaining}
+						callback={() => resolveCheckIn(false)}
 					/>
 				{/if}
 			</div>

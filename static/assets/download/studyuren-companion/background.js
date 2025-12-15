@@ -1,8 +1,13 @@
-const ALLOWED_SITES = ["itslearning.com", "somtoday.nl", "bijsven.nl", "studygo.com", "chatgpt.com" ];
+let ALLOWED_SITES = ["itslearning.com", "somtoday.nl", "bijsven.nl", "studygo.com", "chatgpt.com" ];
 
-fetch("https://studyuren.bijsven.nl/allowed_sites.json").then(res => res.json()).then(data => {
-    ALLOWED_SITES = data;
-});
+fetch("https://studyuren.bijsven.nl/allowed_sites.json")
+    .then(res => res.json())
+    .then(data => {
+        ALLOWED_SITES = data;
+    })
+    .catch(() => {
+        // keep the fallback list if remote fetch fails
+    });
 
 let sessionActive = false;
 let studyurenTabId = null;
@@ -49,6 +54,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         case "studyuren:focus-studyuren-tab":
             focusStudyurenTab();
             break;
+            
+        case "studyuren:check-in-start":
+            // Broadcast check-in start to all other tabs with timing data
+            broadcastCheckIn(true, msg.data);
+            break;
+
+        case "studyuren:check-in-end":
+            // Broadcast check-in end to all tabs
+            broadcastCheckIn(false, msg.data);
+            break;
     }
 });
 
@@ -57,9 +72,45 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         if (studyurenTabId) {
             chrome.tabs.sendMessage(studyurenTabId, { type: "studyuren:session:active" });
         }
+        // Broadcast to all tabs that activity was detected
+        broadcastActivityConfirmed();
     }
 });
 
+function broadcastActivityConfirmed() {
+    chrome.tabs.query({}, (tabs) => {
+        tabs.forEach(tab => {
+            if (!tab.id || tab.id === studyurenTabId) return;
+            
+            chrome.tabs.sendMessage(tab.id, {
+                type: "studyuren:activity-confirmed"
+            }, () => {
+                if (chrome.runtime.lastError) return;
+            });
+        });
+    });
+}
+
+function broadcastCheckIn(isActive, data = {}) {
+    console.log(
+        '[Background] Broadcasting check-in:',
+        isActive ? 'START' : 'END',
+        data?.duration ? `(${data.duration}s)` : ''
+    );
+
+    chrome.tabs.query({}, (tabs) => {
+        tabs.forEach(tab => {
+            if (!tab.id || tab.id === studyurenTabId) return;
+
+            chrome.tabs.sendMessage(tab.id, {
+                type: isActive ? "studyuren:check-in:start" : "studyuren:check-in:end",
+                data
+            }, () => {
+                if (chrome.runtime.lastError) return;
+            });
+        });
+    });
+}
 
 function broadcastSessionState() {
     console.log('[Background] Broadcasting sessie status:', sessionActive ? 'START' : 'END');

@@ -1,40 +1,33 @@
 <script lang="ts">
-	import { onDestroy, onMount, unmount } from "svelte";
 	import { fly } from "svelte/transition";
 
 	const duration = 10;
 	const radius = 20;
 	const circumference = 2 * Math.PI * radius;
 
-	const { callback } = $props();
+	const {
+		callback,
+		remaining = $bindable(duration),
+		duration: incomingDuration = duration,
+	} = $props();
 
-	let interval: number | undefined;
-
-	let counter = $state(duration);
 	let offset = $state(0);
-
-	onMount(() => {
-		interval = setInterval(() => {
-			counter--;
-
-			if (counter <= 0) {
-				clearInterval(interval);
-				setTimeout(() => {
-					callback();
-				}, 1000);
-			}
-		}, 1000);
-	});
-
-	onDestroy(() => {
-		clearInterval(interval);
-		counter = duration;
-		offset = 0;
-	});
+	let hasCompleted = $state(false);
 
 	$effect(() => {
-		const progress = counter / duration;
+		// keep the visual progress in sync with the parent supplied timer
+		const safeDuration = incomingDuration || duration;
+		const progress = Math.max(0, Math.min(remaining / safeDuration, 1));
 		offset = circumference * (1 - progress);
+
+		if (remaining <= 0 && !hasCompleted) {
+			hasCompleted = true;
+			setTimeout(() => callback?.(), 250);
+		}
+
+		if (remaining > 0) {
+			hasCompleted = false;
+		}
 	});
 </script>
 
@@ -46,8 +39,7 @@
 	<div>
 		<p class="text-xs opacity-45">Ben je er nog?</p>
 		<p class="w-64 text-xs">
-			Beweeg met je muis om door te gaan, zonder interactie stopt de
-			sessie.
+			Beweeg met je muis om door te gaan, zonder interactie stopt de sessie.
 		</p>
 	</div>
 
@@ -72,7 +64,7 @@
 			stroke-dasharray={circumference}
 			stroke-dashoffset={offset}
 			stroke-linecap="round"
-			style="transition: stroke-dashoffset 1s linear;"
+			style="transition: stroke-dashoffset 0.5s linear;"
 		/>
 	</svg>
 </div>
