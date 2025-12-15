@@ -454,7 +454,6 @@
 							onclick={() => {
 								showExtensionInstructions = true;
 								extensionNeedsUpdate = false;
-								window.location.reload();
 							}}
 						>
 							Update
