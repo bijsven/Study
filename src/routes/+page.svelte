@@ -901,7 +901,7 @@
 	}
 
 	:global(.animate-zoomout-and-unblur) {
-		animation: zoomout-and-unblur 2s cubic-bezier(0.175, 0.885, 0.32, 1.275)
+		animation: zoomout-and-unblur 1.75s cubic-bezier(0.215, 0.61, 0.1, 1)
 			normal forwards;
 	}
 
