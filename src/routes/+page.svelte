@@ -125,7 +125,7 @@
 	}
 
 	onMount(() => {
-		window.SetCustomWallpaper = () => {
+		window.SetWallpaper = () => {
 			showCustomWallpaperChooser = true;
 		};
 

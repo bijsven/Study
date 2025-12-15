@@ -1,8 +1,8 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
 declare global {
-	namespace Window {
-		function SetCustomWallpaper(background: string): void;
+	interface Window {
+		SetWallpaper(): void;
 	}
 
 	namespace App {

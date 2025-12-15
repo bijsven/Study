@@ -383,7 +383,7 @@
 		<button
 			onclick={() => {
 				callback();
-				window.SetCustomWallpaper();
+				window.SetWallpaper();
 			}}
 			class="text-white/30 hover:text-white/70 cursor-pointer duration-300 text-sm absolute top-12 right-12 text-center flex gap-2 items-center justify-center"
 		>
