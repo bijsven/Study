@@ -72,7 +72,7 @@
 
 		app.counter = Math.max(
 			0,
-			Math.floor((Date.now() - sessionStartedAt) / 1000),
+			Math.floor((Date.now() - sessionStartedAt) / 1000)
 		);
 	}
 
@@ -117,7 +117,7 @@
 				query: {
 					groupId: localStorage.getItem("group")!,
 				},
-			},
+			}
 		);
 
 		return score;
@@ -188,7 +188,7 @@
 								query: {
 									groupId: localStorage.getItem("group")!,
 								},
-							},
+							}
 						);
 				} catch (e) {
 					console.log("[Network] Record non-existend");
@@ -212,7 +212,7 @@
 						query: {
 							groupId: localStorage.getItem("group")!,
 						},
-					},
+					}
 				);
 
 				setInterval(async () => {
@@ -225,7 +225,7 @@
 							query: {
 								groupId: localStorage.getItem("group")!,
 							},
-						},
+						}
 					);
 				}, 5000);
 
@@ -345,14 +345,14 @@
 
 		window.postMessage(
 			{ type: "studyuren:check-in-start", duration, startedAt },
-			"*",
+			"*"
 		);
 
 		clearCheckInInterval();
 		checkInInterval = setInterval(() => {
 			const remaining = Math.max(
 				0,
-				Math.ceil(duration - (Date.now() - startedAt) / 1000),
+				Math.ceil(duration - (Date.now() - startedAt) / 1000)
 			);
 
 			checkInState.remaining = remaining;
@@ -395,8 +395,7 @@
 
 		clearCheckInTimeout();
 
-		const delay = 20000;
-		// const delay = Math.random() * (300000 - 10000) + 10000;
+		const delay = Math.random() * (300000 - 10000) + 10000;
 		checkInTimeout = setTimeout(() => {
 			if (!app.running) return;
 			if (checkInState.active) return;
@@ -419,15 +418,13 @@
 
 	function startSession() {
 		if (sessionStartedAt) {
-			// Session already initialized; no need to re-run setup.
 			return;
 		}
 
 		sessionStartedAt = Date.now();
 		app.counter = 0;
 
-		if (!localStorage.getItem("hint:extension")) {
-			localStorage.setItem("hint:extension", "true");
+		if (!extensionConnected) {
 			showExtensionHint = true;
 		}
 		image?.classList.remove("animate-zoomout-and-unblur");
@@ -446,7 +443,7 @@
 				type: "studyuren:start-session",
 				startedAt: sessionStartedAt,
 			},
-			"*",
+			"*"
 		);
 	}
 
