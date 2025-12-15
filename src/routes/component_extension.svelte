@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 
-	let { extConnected = $bindable(false) } = $props();
+	let { extConnected = $bindable(false), needsUpdate = $bindable(false) } =
+		$props();
 
 	let checkTimeout: number | undefined;
 
@@ -15,6 +16,19 @@
 					event.data.version
 				);
 				extConnected = true;
+
+				fetch("/assets/download/studyuren-companion/manifest.json")
+					.then((res) => res.json())
+					.then((data) => {
+						if (data.version !== event.data.version) {
+							console.debug(
+								"[Extension] Extension version is outdated, please update to version:",
+								data.version
+							);
+
+							needsUpdate = true;
+						}
+					});
 
 				if (checkTimeout) {
 					clearTimeout(checkTimeout);

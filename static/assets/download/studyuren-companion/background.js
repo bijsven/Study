@@ -213,32 +213,30 @@ setInterval(async () => {
     const windows = await chrome.windows.getAll({populate: false});
     const focusedWindow = windows.find(w => w.focused);
 
-    chrome.tabs.query({}, (tabs) => {
-    if (!focusedWindow) {
-        focusStudyurenTab()
-        console.log('[Background] No focussed window');
-        if (sessionActive) {
-            console.log('[Background] Browser lost focus, stopping session.');
-            const studyTab = tabs.find(t => 
-                t.url && (t.url.includes('studyuren.bijsven.nl') || t.url.includes('localhost'))
-            );
-
-            sessionActive = false;
-
-            chrome.tabs.sendMessage(studyTab.id, {
-                type: "studyuren:session:force-stop"
-            }, () => {
-                if (chrome.runtime.lastError) {
-                    console.log('[Background] Kon stop bericht niet sturen');
-                }
-            });
-
-            broadcastSessionState();
-        }
-    } else if (focusedWindow.id !== lastFocusedWindowId) {
+    if (focusedWindow && focusedWindow.id !== lastFocusedWindowId) {
         console.log('[Background] Nieuw focused window:', focusedWindow.id);
         lastFocusedWindowId = focusedWindow.id;
     }
-    });
 
+    if (sessionActive) {
+        chrome.tabs.query({}, (tabs) => {
+            const studyTab = tabs.find(t =>
+                t.url && (t.url.includes('studyuren.bijsven.nl') || t.url.includes('localhost'))
+            );
+
+            if (!studyTab) {
+                console.log('[Background] Studyuren tab gesloten, sessie stoppen.');
+                sessionActive = false;
+                studyurenTabId = null;
+                broadcastSessionState();
+            } else if (studyTab.id !== studyurenTabId) {
+                console.log('[Background] TabID update:', studyurenTabId, '->', studyTab.id);
+                studyurenTabId = studyTab.id;
+            }
+
+            if (!focusedWindow) {
+                console.log('[Background] Browser lost focus, sessie blijft actief maar Studyuren-tab wordt niet geforceerd.');
+            }
+        });
+    }
 }, 1000);

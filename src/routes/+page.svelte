@@ -31,6 +31,7 @@
 	let showExtensionHint = $state(false);
 	let showExtensionInstructions = $state(false);
 	let showExtensionUseHint = $state(true);
+	let extensionNeedsUpdate = $state(false);
 
 	let blockedAction = $state({
 		visible: false,
@@ -179,22 +180,12 @@
 					});
 				}
 
-				const item = await pb.collection("studyuren_live").create(
-					{
-						user: localStorage.getItem("user:id")!,
-						ping: new Date().toISOString(),
-					},
-					{
-						query: {
-							groupId: localStorage.getItem("group")!,
-						},
-					}
-				);
+				let item: any;
 
-				setInterval(async () => {
-					await pb.collection("studyuren_live").update(
-						item.id,
+				if (app.running) {
+					item = await pb.collection("studyuren_live").create(
 						{
+							user: localStorage.getItem("user:id")!,
 							ping: new Date().toISOString(),
 						},
 						{
@@ -203,6 +194,22 @@
 							},
 						}
 					);
+				}
+
+				setInterval(async () => {
+					if (app.running) {
+						await pb.collection("studyuren_live").update(
+							item.id,
+							{
+								ping: new Date().toISOString(),
+							},
+							{
+								query: {
+									groupId: localStorage.getItem("group")!,
+								},
+							}
+						);
+					}
 				}, 5000);
 
 				otherOnline = await pb
@@ -348,7 +355,10 @@
 	});
 </script>
 
-<ComponentExtension bind:extConnected={extensionConnected} />
+<ComponentExtension
+	bind:extConnected={extensionConnected}
+	bind:needsUpdate={extensionNeedsUpdate}
+/>
 
 {#if mounted}
 	<content
@@ -414,6 +424,48 @@
 							}}
 						>
 							Nee, bedankt.
+						</button>
+					</div>
+				</div>
+			{/if}
+
+			{#if extensionNeedsUpdate}
+				<div
+					class="backdrop-blur-xl bg-black/75 absolute top-0 left-0 h-full w-full"
+					transition:fade={{ duration: 500 }}
+				></div>
+				<div
+					in:fly={{ duration: 500, y: -10, easing: cubicOut }}
+					out:fly={{ duration: 500, y: 10 }}
+					class="absolute top-[50%] left-[50%] translate-x-[-50%] z-40 translate-y-[-50%] flex flex-col items-center gap-4 px-6 py-8 max-w-md w-full"
+				>
+					<div class="flex items-left gap-2 text-white text-2xl">
+						<h1 class="font-semibold">
+							Extension update beschikbaar
+						</h1>
+					</div>
+					<p class="text-white/50 text-sm text-left">
+						De extension is verouderd. Klik op "Update" om de
+						extensie te updaten.
+					</p>
+					<div class="flex gap-5 items-center justify-center">
+						<button
+							class="text-white/65 hover:text-white cursor-pointer duration-300 text-sm text-center"
+							onclick={() => {
+								showExtensionInstructions = true;
+								extensionNeedsUpdate = false;
+								window.location.reload();
+							}}
+						>
+							Update
+						</button>
+						<button
+							class="text-white/65 hover:text-white cursor-pointer duration-300 text-sm text-center"
+							onclick={() => {
+								showExtensionHint = false;
+							}}
+						>
+							Sluiten
 						</button>
 					</div>
 				</div>
