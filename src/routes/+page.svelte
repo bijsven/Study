@@ -13,7 +13,7 @@
 
 	let image = $state(undefined) as HTMLImageElement | undefined;
 
-	let interval_counter = 0;
+let sessionInterval: ReturnType<typeof setInterval> | undefined;
 
 	let mounted = $state(false);
 	let showOverlay = $state(false);
@@ -49,14 +49,15 @@
 		background: "nature.jpg",
 	});
 
-let sessionStartedAt = $state<number | null>(null);
-let checkInState = $state({
-	active: false,
-	duration: 10,
-	startedAt: 0,
-	remaining: 10,
-});
-let checkInInterval: number | undefined;
+	let sessionStartedAt = $state<number | null>(null);
+	let checkInState = $state({
+		active: false,
+		duration: 10,
+		startedAt: 0,
+		remaining: 10,
+	});
+let checkInInterval: ReturnType<typeof setInterval> | undefined;
+let checkInTimeout: ReturnType<typeof setTimeout> | undefined;
 
 	const formatTime = (time: number) => {
 		const h = Math.floor(time / 3600);
@@ -165,9 +166,11 @@ let checkInInterval: number | undefined;
 			}
 
 			if (event.data.type === "studyuren:session:active") {
-				resolveCheckIn(true);
-				if (checkInTimeout) clearTimeout(checkInTimeout);
-				scheduleCheckIn();
+				if (checkInState.active) {
+					resolveCheckIn(true);
+				} else {
+					scheduleCheckIn();
+				}
 			}
 		});
 
@@ -300,26 +303,37 @@ let checkInInterval: number | undefined;
 		mounted = true;
 
 		return () => {
-			clearInterval(interval_counter);
-			if (checkInTimeout) {
-				clearTimeout(checkInTimeout);
-			}
+			clearSessionInterval();
+			clearCheckInTimeout();
 			clearCheckInInterval();
 		};
 	});
 
-	let checkInTimeout: number | undefined;
-
 	function clearCheckInInterval() {
 		if (checkInInterval) {
 			clearInterval(checkInInterval);
+			checkInInterval = undefined;
+		}
+	}
+
+	function clearCheckInTimeout() {
+		if (checkInTimeout) {
+			clearTimeout(checkInTimeout);
+			checkInTimeout = undefined;
+		}
+	}
+
+	function clearSessionInterval() {
+		if (sessionInterval) {
+			clearInterval(sessionInterval);
+			sessionInterval = undefined;
 		}
 	}
 
 	function triggerCheckIn(duration = 10) {
-		if (checkInTimeout) {
-			clearTimeout(checkInTimeout);
-		}
+		if (checkInState.active) return;
+
+		clearCheckInTimeout();
 
 		const startedAt = Date.now();
 
@@ -365,6 +379,8 @@ let checkInInterval: number | undefined;
 
 		if (!successful) {
 			app.running = false;
+		} else if (app.running) {
+			scheduleCheckIn();
 		}
 	}
 
@@ -373,18 +389,21 @@ let checkInInterval: number | undefined;
 			return;
 		}
 
-		if (checkInTimeout) {
-			clearTimeout(checkInTimeout);
+		if (checkInState.active) {
+			return;
 		}
 
-		const delay = Math.random() * (300000 - 10000) + 10000;
+		clearCheckInTimeout();
+
+		const delay = 20000;
+		// const delay = Math.random() * (300000 - 10000) + 10000;
 		checkInTimeout = setTimeout(() => {
 			if (!app.running) return;
+			if (checkInState.active) return;
 
 			const audio = new Audio("/assets/notification.mp3");
 			audio.play();
 			triggerCheckIn();
-			scheduleCheckIn();
 		}, delay);
 	}
 
@@ -392,55 +411,74 @@ let checkInInterval: number | undefined;
 		const running = app.running;
 
 		if (running) {
-		if (!sessionStartedAt) {
-			sessionStartedAt = Date.now();
-			app.counter = 0;
+			startSession();
+		} else {
+			stopSession();
+		}
+	});
+
+	function startSession() {
+		if (sessionStartedAt) {
+			// Session already initialized; no need to re-run setup.
+			return;
 		}
 
-			if (!localStorage.getItem("hint:extension")) {
-				localStorage.setItem("hint:extension", "true");
-				showExtensionHint = true;
-			}
-			image?.classList.remove("animate-zoomout-and-unblur");
-			image?.classList.add("animate-zoom-and-blur");
+		sessionStartedAt = Date.now();
+		app.counter = 0;
 
-			scheduleCheckIn();
+		if (!localStorage.getItem("hint:extension")) {
+			localStorage.setItem("hint:extension", "true");
+			showExtensionHint = true;
+		}
+		image?.classList.remove("animate-zoomout-and-unblur");
+		image?.classList.add("animate-zoom-and-blur");
 
-			interval_counter = setInterval(() => {
+		scheduleCheckIn();
+
+		clearSessionInterval();
+		sessionInterval = setInterval(() => {
 			syncTimerWithStart();
-			}, 1000);
+		}, 1000);
 
-			context?.requestFullscreen?.();
+		context?.requestFullscreen?.();
 		window.postMessage(
-			{ type: "studyuren:start-session", startedAt: sessionStartedAt },
+			{
+				type: "studyuren:start-session",
+				startedAt: sessionStartedAt,
+			},
 			"*"
 		);
-		} else {
+	}
+
+	function stopSession() {
+		const hadSession = Boolean(sessionStartedAt);
+
 		if (sessionStartedAt) {
 			syncTimerWithStart();
 		}
 
+		if (hadSession) {
 			saveScore(app.counter);
-			window.postMessage({ type: "studyuren:end-session" }, "*");
+		}
+		window.postMessage({ type: "studyuren:end-session" }, "*");
 
-			image?.classList.remove("animate-zoom-and-blur");
-			image?.classList.add("animate-zoomout-and-unblur");
+		image?.classList.remove("animate-zoom-and-blur");
+		image?.classList.add("animate-zoomout-and-unblur");
 
-			clearInterval(interval_counter);
-			if (checkInTimeout) {
-				clearTimeout(checkInTimeout);
-			}
+		clearSessionInterval();
+		clearCheckInTimeout();
 		clearCheckInInterval();
 
-			app.counter = 0;
+		app.counter = 0;
 		app.CheckIn = false;
 		checkInState.active = false;
+		checkInState.remaining = checkInState.duration;
 		sessionStartedAt = null;
-			if (document.fullscreenElement) {
-				document.exitFullscreen?.();
-			}
+
+		if (document.fullscreenElement) {
+			document.exitFullscreen?.();
 		}
-	});
+	}
 
 	$effect(() => {
 		safeOnlineUsers = (otherOnline ?? [])
