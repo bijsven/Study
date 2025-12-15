@@ -182,10 +182,22 @@
 
 				let item: any;
 
-				if (app.running) {
-					item = await pb.collection("studyuren_live").create(
+				item = await pb.collection("studyuren_live").create(
+					{
+						user: localStorage.getItem("user:id")!,
+						ping: new Date().toISOString(),
+					},
+					{
+						query: {
+							groupId: localStorage.getItem("group")!,
+						},
+					}
+				);
+
+				setInterval(async () => {
+					await pb.collection("studyuren_live").update(
+						item.id,
 						{
-							user: localStorage.getItem("user:id")!,
 							ping: new Date().toISOString(),
 						},
 						{
@@ -194,22 +206,6 @@
 							},
 						}
 					);
-				}
-
-				setInterval(async () => {
-					if (app.running) {
-						await pb.collection("studyuren_live").update(
-							item.id,
-							{
-								ping: new Date().toISOString(),
-							},
-							{
-								query: {
-									groupId: localStorage.getItem("group")!,
-								},
-							}
-						);
-					}
 				}, 5000);
 
 				otherOnline = await pb
