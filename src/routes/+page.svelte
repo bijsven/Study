@@ -461,7 +461,7 @@
 						<button
 							class="text-white/65 hover:text-white cursor-pointer duration-300 text-sm text-center"
 							onclick={() => {
-								showExtensionHint = false;
+								extensionNeedsUpdate = false;
 							}}
 						>
 							Sluiten
