@@ -11,7 +11,7 @@ fetch("https://studyuren.bijsven.nl/allowed_sites.json")
 
 let sessionActive = false;
 let overlayRoot = null;
-let requestingActivity = false;
+let requestingActivity = false; // reserved for future use; check-ins now follow website events
 let overlayElements = null;
 let checkInInterval = null;
 let checkInState = {
@@ -27,7 +27,6 @@ const isStudyurenPage = window.location.hostname.includes('studyuren.bijsven.nl'
 
 let lastActivity = Date.now();
 const ACTIVITY_INTERVAL = 5000;
-const ACTIVITY_CHECK_INTERVAL = 10000; // Check every 10 seconds
 const CHECKIN_RADIUS = 20;
 const CHECKIN_CIRCUMFERENCE = 2 * Math.PI * CHECKIN_RADIUS;
 
@@ -124,17 +123,6 @@ function updateActivity() {
 window.addEventListener("mousemove", updateActivity);
 window.addEventListener("keydown", updateActivity);
 window.addEventListener("scroll", updateActivity);
-
-// Check for inactivity periodically
-setInterval(() => {
-    if (!sessionActive || isStudyurenPage) return;
-    
-    const timeSinceActivity = Date.now() - lastActivity;
-    if (timeSinceActivity > ACTIVITY_CHECK_INTERVAL) {
-        requestingActivity = true;
-        updateOverlayState();
-    }
-}, 2000);
 
 setInterval(() => {
     if (Date.now() - lastActivity < ACTIVITY_INTERVAL) {
@@ -293,16 +281,16 @@ function updateOverlayState() {
     const { pulseDot, label, shakeIcon } = overlayElements;
 
     if (pulseDot) {
-        pulseDot.style.backgroundColor = requestingActivity ? '#F59E0B' : '#10B981';
-        pulseDot.style.animation = requestingActivity ? 'urgentPulse 1s infinite' : 'pulse 2s infinite';
+        pulseDot.style.backgroundColor = '#10B981';
+        pulseDot.style.animation = 'pulse 2s infinite';
     }
 
     if (label) {
-        label.textContent = requestingActivity ? 'Beweeg je muis!' : 'Studyuren Sessie';
+        label.textContent = 'Studyuren Sessie';
     }
 
     if (shakeIcon) {
-        shakeIcon.style.display = requestingActivity ? 'block' : 'none';
+        shakeIcon.style.display = 'none';
     }
 
     updateCheckInUI();
