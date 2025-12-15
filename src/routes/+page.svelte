@@ -51,10 +51,10 @@
 
 	let sessionStartedAt = $state<number | null>(null);
 	let checkInState = $state({
-		active: false,
-		duration: 10,
-		startedAt: 0,
-		remaining: 10,
+		active: false as boolean,
+		duration: 10 as number,
+		startedAt: 0 as number,
+		remaining: 10 as number,
 	});
 	let checkInInterval: ReturnType<typeof setInterval> | undefined;
 	let checkInTimeout: ReturnType<typeof setTimeout> | undefined;
@@ -124,6 +124,13 @@
 	}
 
 	onMount(() => {
+		window.SetCustomWallpaper = (background: string) => {
+			app.background = background;
+			localStorage.setItem("background", background);
+		};
+
+		app.background = localStorage.getItem("background") || "nature.jpg";
+
 		const hasFocus = () => {
 			return (
 				document.hasFocus() && document.visibilityState === "visible"

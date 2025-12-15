@@ -1,28 +1,21 @@
 <script lang="ts">
 	import { fly } from "svelte/transition";
 
-const defaultDuration = 10;
-const radius = 20;
-const circumference = 2 * Math.PI * radius;
+	const defaultDuration = 10;
+	const radius = 20;
+	const circumference = 2 * Math.PI * radius;
 
-type Props = {
-	callback?: () => void;
-	remaining?: number;
-	duration?: number;
-};
-
-const {
-	callback,
-	remaining = $bindable(defaultDuration),
-	duration: incomingDuration = defaultDuration,
-} = $props<Props>();
+	const {
+		callback,
+		remaining = $bindable(),
+		duration: incomingDuration,
+	} = $props();
 
 	let offset = $state(0);
 	let hasCompleted = $state(false);
 
 	$effect(() => {
-		// keep the visual progress in sync with the parent supplied timer
-		const safeDuration = incomingDuration || duration;
+		const safeDuration = incomingDuration;
 		const progress = Math.max(0, Math.min(remaining / safeDuration, 1));
 		offset = circumference * (1 - progress);
 
@@ -45,7 +38,8 @@ const {
 	<div>
 		<p class="text-xs opacity-45">Ben je er nog?</p>
 		<p class="w-64 text-xs">
-			Beweeg met je muis om door te gaan, zonder interactie stopt de sessie.
+			Beweeg met je muis om door te gaan, zonder interactie stopt de
+			sessie.
 		</p>
 	</div>
 
