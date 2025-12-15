@@ -1,5 +1,9 @@
 const ALLOWED_SITES = ["itslearning.com", "somtoday.nl", "bijsven.nl", "studygo.com", "chatgpt.com" ];
 
+fetch("https://studyuren.bijsven.nl/allowed_sites.json").then(res => res.json()).then(data => {
+    ALLOWED_SITES = data;
+});
+
 let sessionActive = false;
 let studyurenTabId = null;
 
@@ -47,6 +51,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             break;
     }
 });
+
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (msg.type === "studyuren:user-active") {
+        if (studyurenTabId) {
+            chrome.tabs.sendMessage(studyurenTabId, { type: "studyuren:session:active" });
+        }
+    }
+});
+
 
 function broadcastSessionState() {
     console.log('[Background] Broadcasting sessie status:', sessionActive ? 'START' : 'END');

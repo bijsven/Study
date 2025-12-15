@@ -1,5 +1,9 @@
 const ALLOWED_SITES = ["itslearning.com", "somtoday.nl", "bijsven.nl", "studygo.com", "chatgpt.com", "claude.ai"];
 
+fetch("https://studyuren.bijsven.nl/allowed_sites.json").then(res => res.json()).then(data => {
+    ALLOWED_SITES = data;
+});
+
 let sessionActive = false;
 let overlayRoot = null;
 const isStudyurenPage = window.location.hostname.includes('studyuren.bijsven.nl') || 
@@ -7,12 +11,28 @@ const isStudyurenPage = window.location.hostname.includes('studyuren.bijsven.nl'
                         window.location.hostname === '127.0.0.1';
 
 
+let lastActivity = Date.now();
+const ACTIVITY_INTERVAL = 5000;
+
+function updateActivity() {
+    lastActivity = Date.now();
+}
+
+window.addEventListener("mousemove", updateActivity);
+window.addEventListener("keydown", updateActivity);
+window.addEventListener("scroll", updateActivity);
+
+setInterval(() => {
+    if (Date.now() - lastActivity < ACTIVITY_INTERVAL) {
+        chrome.runtime.sendMessage({ type: "studyuren:user-active" });
+    }
+}, 2000);
+
+
 
 window.addEventListener("message", (event) => {
     if (event.source !== window) return;
     if (!event.data || !event.data.type) return;
-
-    
 
     switch (event.data.type) {
         case "studyuren:start-session":
@@ -206,7 +226,7 @@ function createFocusOverlay() {
 
     const label = document.createElement("p");
     label.style.cssText = 'margin: 0; font-weight: 500;';
-    label.textContent = "Focus sessie";
+    label.textContent = "Studyuren Sessie";
 
     overlay.appendChild(pulseDot);
     overlay.appendChild(label);

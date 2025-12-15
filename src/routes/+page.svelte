@@ -144,6 +144,12 @@
 				console.log("[App] Force stop ontvangen van extensie");
 				app.running = false;
 			}
+
+			if (event.data.type === "studyuren:session:active") {
+				app.CheckIn = false;
+				if (checkInTimeout) clearTimeout(checkInTimeout);
+				scheduleCheckIn();
+			}
 		});
 
 		(async () => {
