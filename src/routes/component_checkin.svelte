@@ -1,15 +1,21 @@
 <script lang="ts">
 	import { fly } from "svelte/transition";
 
-	const duration = 10;
-	const radius = 20;
-	const circumference = 2 * Math.PI * radius;
+const defaultDuration = 10;
+const radius = 20;
+const circumference = 2 * Math.PI * radius;
 
-	const {
-		callback,
-		remaining = $bindable(duration),
-		duration: incomingDuration = duration,
-	} = $props();
+type Props = {
+	callback?: () => void;
+	remaining?: number;
+	duration?: number;
+};
+
+const {
+	callback,
+	remaining = $bindable(defaultDuration),
+	duration: incomingDuration = defaultDuration,
+} = $props<Props>();
 
 	let offset = $state(0);
 	let hasCompleted = $state(false);

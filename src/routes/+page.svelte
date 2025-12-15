@@ -13,7 +13,7 @@
 
 	let image = $state(undefined) as HTMLImageElement | undefined;
 
-let sessionInterval: ReturnType<typeof setInterval> | undefined;
+	let sessionInterval: ReturnType<typeof setInterval> | undefined;
 
 	let mounted = $state(false);
 	let showOverlay = $state(false);
@@ -56,8 +56,8 @@ let sessionInterval: ReturnType<typeof setInterval> | undefined;
 		startedAt: 0,
 		remaining: 10,
 	});
-let checkInInterval: ReturnType<typeof setInterval> | undefined;
-let checkInTimeout: ReturnType<typeof setTimeout> | undefined;
+	let checkInInterval: ReturnType<typeof setInterval> | undefined;
+	let checkInTimeout: ReturnType<typeof setTimeout> | undefined;
 
 	const formatTime = (time: number) => {
 		const h = Math.floor(time / 3600);
@@ -72,7 +72,7 @@ let checkInTimeout: ReturnType<typeof setTimeout> | undefined;
 
 		app.counter = Math.max(
 			0,
-			Math.floor((Date.now() - sessionStartedAt) / 1000)
+			Math.floor((Date.now() - sessionStartedAt) / 1000),
 		);
 	}
 
@@ -117,7 +117,7 @@ let checkInTimeout: ReturnType<typeof setTimeout> | undefined;
 				query: {
 					groupId: localStorage.getItem("group")!,
 				},
-			}
+			},
 		);
 
 		return score;
@@ -188,7 +188,7 @@ let checkInTimeout: ReturnType<typeof setTimeout> | undefined;
 								query: {
 									groupId: localStorage.getItem("group")!,
 								},
-							}
+							},
 						);
 				} catch (e) {
 					console.log("[Network] Record non-existend");
@@ -212,7 +212,7 @@ let checkInTimeout: ReturnType<typeof setTimeout> | undefined;
 						query: {
 							groupId: localStorage.getItem("group")!,
 						},
-					}
+					},
 				);
 
 				setInterval(async () => {
@@ -225,7 +225,7 @@ let checkInTimeout: ReturnType<typeof setTimeout> | undefined;
 							query: {
 								groupId: localStorage.getItem("group")!,
 							},
-						}
+						},
 					);
 				}, 5000);
 
@@ -345,14 +345,14 @@ let checkInTimeout: ReturnType<typeof setTimeout> | undefined;
 
 		window.postMessage(
 			{ type: "studyuren:check-in-start", duration, startedAt },
-			"*"
+			"*",
 		);
 
 		clearCheckInInterval();
 		checkInInterval = setInterval(() => {
 			const remaining = Math.max(
 				0,
-				Math.ceil(duration - (Date.now() - startedAt) / 1000)
+				Math.ceil(duration - (Date.now() - startedAt) / 1000),
 			);
 
 			checkInState.remaining = remaining;
@@ -446,7 +446,7 @@ let checkInTimeout: ReturnType<typeof setTimeout> | undefined;
 				type: "studyuren:start-session",
 				startedAt: sessionStartedAt,
 			},
-			"*"
+			"*",
 		);
 	}
 
