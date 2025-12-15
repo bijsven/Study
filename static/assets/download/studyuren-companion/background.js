@@ -259,35 +259,46 @@ function closeExistingBlockedTabs() {
 }
 
 let lastFocusedWindowId = null;
+let stoppedDueToAppSwitch = false;
 
 setInterval(async () => {
-    const windows = await chrome.windows.getAll({populate: false});
-    const focusedWindow = windows.find(w => w.focused);
+    const windows = await chrome.windows.getAll();
+    const focusedWindow = windows.find(w => w.focused) || null;
 
-    if (focusedWindow && focusedWindow.id !== lastFocusedWindowId) {
-        console.log('[Background] Nieuw focused window:', focusedWindow.id);
-        lastFocusedWindowId = focusedWindow.id;
+    if (focusedWindow?.id !== lastFocusedWindowId) {
+        lastFocusedWindowId = focusedWindow?.id ?? null;
     }
 
-    if (sessionActive) {
+    if (sessionActive && !focusedWindow) {
+        console.log('[Background] App switch tijdens sessie → sessie stoppen');
+        sessionActive = false;
+        stoppedDueToAppSwitch = true;
+        broadcastSessionState();
+
         chrome.tabs.query({}, (tabs) => {
-            const studyTab = tabs.find(t =>
-                t.url && (t.url.includes('studyuren.bijsven.nl') || t.url.includes('localhost'))
-            );
-
-            if (!studyTab) {
-                console.log('[Background] Studyuren tab gesloten, sessie stoppen.');
-                sessionActive = false;
-                studyurenTabId = null;
-                broadcastSessionState();
-            } else if (studyTab.id !== studyurenTabId) {
-                console.log('[Background] TabID update:', studyurenTabId, '->', studyTab.id);
-                studyurenTabId = studyTab.id;
-            }
-
-            if (!focusedWindow) {
-                console.log('[Background] Browser lost focus, sessie blijft actief maar Studyuren-tab wordt niet geforceerd.');
+            for (const tab of tabs) {
+                chrome.tabs.sendMessage(tab.id, {
+                    type: "studyuren:session:force-stop"
+                });
             }
         });
+        return;
     }
+
+    if (!sessionActive && stoppedDueToAppSwitch && focusedWindow) {
+        const tabs = await chrome.tabs.query({});
+        const tussenurenTab = tabs.find(t =>
+            t.url && t.url.includes('tussenuren.bijsven.nl')
+        );
+
+        if (tussenurenTab) {
+            console.log('[Background] Terug van app switch → Tussenuren forceren');
+            await chrome.windows.update(tussenurenTab.windowId, { focused: true });
+            await chrome.tabs.update(tussenurenTab.id, { active: true });
+        }
+
+        stoppedDueToAppSwitch = false;
+        return;
+    }
+
 }, 1000);
