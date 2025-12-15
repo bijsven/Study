@@ -47,7 +47,7 @@
 		},
 		counter: 0,
 		CheckIn: false,
-		background: "1.webp",
+		background: "8.webp",
 	});
 
 	let sessionStartedAt = $state<number | null>(null);
@@ -129,7 +129,7 @@
 			showCustomWallpaperChooser = true;
 		};
 
-		app.background = localStorage.getItem("background") || "nature.jpg";
+		app.background = localStorage.getItem("background") || "8.webp";
 
 		const hasFocus = () => {
 			return (
