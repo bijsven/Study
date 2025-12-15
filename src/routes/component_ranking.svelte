@@ -10,6 +10,7 @@
 	import { pb } from "$lib";
 	import NumberFlow, { continuous } from "@number-flow/svelte";
 	import { Confetti } from "svelte-confetti";
+	import { ArrowLeft, Cog } from "lucide-svelte";
 
 	interface Player {
 		id: string;
@@ -197,7 +198,7 @@
 	role="button"
 	tabindex="0"
 	in:fade={{ duration: 650, easing: cubicOut }}
-	out:fade={{ duration: 450 }}
+	out:fade={{ duration: 450, delay: 400 }}
 	class="absolute top-0 left-0 h-full w-full flex z-50 overflow-hidden bg-black/30 backdrop-blur-xl justify-center items-center"
 >
 	<div class="flex flex-col items-center gap-6 max-w-md w-full px-6">
@@ -221,12 +222,14 @@
 		>
 			<p
 				in:fly={{ duration: 650, y: -10, easing: cubicOut, delay: 350 }}
+				out:fly={{ duration: 650, y: -10, easing: cubicOut }}
 				class="text-xs opacity-45 -mb-2"
 			>
 				Leaderboard
 			</p>
 			<h1
 				in:fly={{ duration: 800, y: -10, easing: cubicOut, delay: 500 }}
+				out:fly={{ duration: 800, y: -10, easing: cubicOut }}
 				class="font-semibold"
 			>
 				{groupName}
@@ -235,6 +238,7 @@
 
 		<div
 			in:fly={{ duration: 250, y: -10, easing: cubicOut, delay: 650 }}
+			out:fly={{ duration: 250, y: -10, easing: cubicOut }}
 			class="flex gap-2 w-full rounded-xl bg-white/5 p-1 border border-white/10"
 			onclick={(e) => {
 				e.stopPropagation();
@@ -300,6 +304,7 @@
 					easing: cubicOut,
 					delay: 650,
 				}}
+				out:fly={{ duration: 450, y: 10, easing: cubicOut }}
 				class="w-full space-y-2 overflow-y-auto min-h-32 max-h-64 pr-2 simplescrollbar self-start shrink-0"
 			>
 				{#key players}
@@ -310,6 +315,11 @@
 								y: -10,
 								easing: cubicOut,
 								delay: i * 100,
+							}}
+							out:fly|global={{
+								duration: 250,
+								y: -10,
+								easing: cubicOut,
 							}}
 							class="flex items-center gap-4 px-4 py-3 rounded-xl bg-white/5 backdrop-blur-sm border {player.id ===
 							localStorage.getItem('user:id')
@@ -373,10 +383,21 @@
 		<button
 			onclick={() => {
 				callback();
+				window.SetCustomWallpaper();
 			}}
-			class="text-white/30 hover:text-white/70 cursor-pointer duration-300 text-sm text-center"
-			>Klik hier om te sluiten</button
+			class="text-white/30 hover:text-white/70 cursor-pointer duration-300 text-sm absolute top-12 right-12 text-center flex gap-2 items-center justify-center"
 		>
+			Instellingen <Cog class="size-4" />
+		</button>
+
+		<button
+			onclick={() => {
+				callback();
+			}}
+			class="text-white/30 hover:text-white/70 cursor-pointer duration-300 text-sm absolute top-12 left-12 text-center flex gap-1 items-center justify-center"
+		>
+			<ArrowLeft class="size-4" /> Terug
+		</button>
 	</div>
 </div>
 

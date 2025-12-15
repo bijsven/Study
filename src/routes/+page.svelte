@@ -32,6 +32,7 @@
 	let showExtensionInstructions = $state(false);
 	let showExtensionUseHint = $state(true);
 	let extensionNeedsUpdate = $state(false);
+	let showCustomWallpaperChooser = $state(false);
 
 	let blockedAction = $state({
 		visible: false,
@@ -46,7 +47,7 @@
 		},
 		counter: 0,
 		CheckIn: false,
-		background: "nature.jpg",
+		background: "1.webp",
 	});
 
 	let sessionStartedAt = $state<number | null>(null);
@@ -124,9 +125,8 @@
 	}
 
 	onMount(() => {
-		window.SetCustomWallpaper = (background: string) => {
-			app.background = background;
-			localStorage.setItem("background", background);
+		window.SetCustomWallpaper = () => {
+			showCustomWallpaperChooser = true;
 		};
 
 		app.background = localStorage.getItem("background") || "nature.jpg";
@@ -522,6 +522,117 @@
 				:{#if formatTime(app.counter)["s"] < 10}0{/if}
 				<NumberFlow value={formatTime(app.counter)["s"]} />
 			</div>
+
+			{#if showCustomWallpaperChooser}
+				<div
+					transition:fade={{ duration: 400 }}
+					class="fixed inset-0 backdrop-blur-3xl bg-black/30 z-30"
+				></div>
+
+				<div
+					in:fly={{ duration: 500, y: 20, easing: cubicOut }}
+					out:fly={{ duration: 300, y: 10, opacity: 0 }}
+					class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40
+		       w-[90%] max-w-2xl"
+				>
+					<div
+						class="backdrop-blur-2xl bg-white/10 border border-white/20 rounded-3xl shadow-2xl overflow-hidden"
+					>
+						<div class="px-6 py-5 border-b border-white/10">
+							<div class="flex items-center justify-between">
+								<h2 class="text-xl font-semibold text-white/95">
+									Kies een achtergrond
+								</h2>
+								<button
+									onclick={() =>
+										(showCustomWallpaperChooser = false)}
+									class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20
+						       flex items-center justify-center transition-all duration-200
+						       hover:scale-105 active:scale-95"
+									aria-label="Close"
+								>
+									<svg
+										class="w-4 h-4 text-white/80"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M6 18L18 6M6 6l12 12"
+										/>
+									</svg>
+								</button>
+							</div>
+						</div>
+
+						<div
+							class="p-6 overflow-y-auto max-h-[60vh] custom-scrollbar"
+						>
+							<div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+								{#each Array(8) as _, i}
+									<button
+										onclick={() => {
+											app.background = i + 1 + ".webp";
+											localStorage.setItem(
+												"background",
+												i + 1 + ".webp"
+											);
+											showCustomWallpaperChooser = false;
+										}}
+										class="group relative aspect-video rounded-2xl overflow-hidden
+							       ring-2 ring-transparent hover:ring-white/40
+							       transition-all duration-300 hover:scale-[1.02]
+							       active:scale-[0.98]"
+									>
+										<img
+											src="/assets/background/{i +
+												1}.webp"
+											alt="Wallpaper {i + 1}"
+											loading="lazy"
+											class="w-full h-full object-cover"
+										/>
+
+										<div
+											class="absolute inset-0 from-black/50 to-transparent
+							            opacity-0 group-hover:opacity-100 transition-opacity duration-300
+							            flex items-end justify-center pb-3"
+										>
+											<span
+												class="text-xs font-medium text-white/90 backdrop-blur-sm
+								             bg-white/20 px-3 py-1 rounded-full"
+											>
+												Select
+											</span>
+										</div>
+
+										{#if app.background === i + 1 + ".webp"}
+											<div
+												class="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/90
+								            flex items-center justify-center shadow-lg"
+											>
+												<svg
+													class="w-4 h-4 text-black"
+													fill="currentColor"
+													viewBox="0 0 20 20"
+												>
+													<path
+														fill-rule="evenodd"
+														d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+														clip-rule="evenodd"
+													/>
+												</svg>
+											</div>
+										{/if}
+									</button>
+								{/each}
+							</div>
+						</div>
+					</div>
+				</div>
+			{/if}
 
 			{#if showExtensionHint}
 				<div
