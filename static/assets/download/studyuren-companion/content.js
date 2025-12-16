@@ -48,29 +48,55 @@ function computeCheckInRemaining() {
     return remaining;
 }
 
+let lastSnapPosition = { top: '20px', left: '20px', right: 'auto', bottom: 'auto', borderRadius: '9999px' };
+
 function updateCheckInUI() {
     if (!overlayElements) return;
-    const { checkinCard, checkinTimerCircle, checkinTimerText } = overlayElements;
+    const { container, checkinTimerCircle } = overlayElements;
 
-    const shouldShow = checkInState.active && sessionActive && !isStudyurenPage;
-    if (checkinCard) {
-        checkinCard.style.display = shouldShow ? "flex" : "none";
+    const shouldShowCheckin = checkInState.active && sessionActive && !isStudyurenPage;
+    
+    if (shouldShowCheckin) {
+        if (!container.classList.contains('mode-checkin')) {
+            container.classList.add('mode-checkin');
+            container.style.top = '20%';
+            container.style.left = '50%';
+            container.style.right = 'auto';
+            container.style.bottom = 'auto';
+            container.style.transform = 'translate(-50%, 0)';
+            container.style.borderRadius = '40px'; // Ronde kaart vorm
+        }
+    } else {
+        if (container.classList.contains('mode-checkin')) {
+            container.classList.remove('mode-checkin');
+            // Terug naar de laatste snap positie
+            applySnapPosition(container);
+        }
     }
-    if (!shouldShow) return;
+
+    // Timer logica blijft hetzelfde
+    if (!shouldShowCheckin) return;
 
     const remaining = computeCheckInRemaining();
-    const progress = Math.max(
-        0,
-        Math.min(remaining / Math.max(checkInState.duration, 1), 1)
-    );
-    const offset = CHECKIN_CIRCUMFERENCE * (1 - progress);
-
+    const totalDuration = checkInState.duration;
+    const percentage = Math.max(0, Math.min(1, (Date.now() - checkInState.startedAt) / 1000 / totalDuration));
+    
+    // Zorg dat timer circle bestaat
     if (checkinTimerCircle) {
+        const offset = CHECKIN_CIRCUMFERENCE * percentage;
         checkinTimerCircle.style.strokeDashoffset = `${offset}px`;
     }
-    if (checkinTimerText) {
-        checkinTimerText.textContent = `${remaining}s`;
-    }
+}
+
+function applySnapPosition(element) {
+    element.style.transform = 'translate(0, 0)'; // Reset transform
+    element.style.top = lastSnapPosition.top;
+    element.style.bottom = lastSnapPosition.bottom;
+    element.style.left = lastSnapPosition.left;
+    element.style.right = lastSnapPosition.right;
+    
+    // Kleine delay voor border-radius voor smooth effect
+    element.style.borderRadius = lastSnapPosition.borderRadius;
 }
 
 function startCheckInFromExtension(data = {}) {
@@ -98,7 +124,7 @@ function startCheckInFromExtension(data = {}) {
         if (remaining <= 0) {
             stopCheckInFromExtension();
         }
-    }, 250);
+    }, 50); // Sneller interval voor soepelere animatie
 }
 
 function stopCheckInFromExtension() {
@@ -283,7 +309,7 @@ function hideOverlay() {
 function updateOverlayState() {
     if (!overlayElements) return;
 
-    const { pulseDot, label, shakeIcon } = overlayElements;
+    const { pulseDot, shakeIcon } = overlayElements;
 
     if (pulseDot) {
         pulseDot.style.backgroundColor = '#10B981';
@@ -304,156 +330,246 @@ function createFocusOverlay() {
 
     const style = document.createElement("style");
     style.textContent = `
-
         @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap');
         
-
-        * { box-sizing: border-box; font-family: "Google Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important; color: white !important; margin: 0; padding: 0; }
+        * { box-sizing: border-box; font-family: "Google Sans", sans-serif !important; color: white !important; margin: 0; padding: 0; }
+        
         @keyframes pulse {
             0%, 100% { transform: scale(1); opacity: 1; }
             50% { transform: scale(1.3); opacity: 0.5; }
         }
-        .session-overlay {
+
+        .widget-container {
             all: initial;
             position: fixed;
-            cursor: grab;
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            background: rgba(0,0,0,0.75);
+            z-index: 2147483647;
+            font-family: "Google Sans", sans-serif;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.75);
             backdrop-filter: blur(14px);
-            height: 48px;
-            padding: 0 20px;
-            border-radius: 9999px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: 
+                width 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+                height 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+                top 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+                left 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+                border-radius 0.5s ease,
+                background-color 0.3s ease;
+            overflow: hidden;
             pointer-events: auto;
-            font-size: 14px;
+            cursor: grab;
             user-select: none;
+            width: 160px;
+            height: 48px;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .session-overlay:active { cursor: grabbing; }
+
+        .widget-container:active { cursor: grabbing; }
+
+        .content-focus {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 12px;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        .content-checkin {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease 0.1s;
+        }
+
+        .widget-container.mode-checkin {
+            width: 384px; 
+            height: 100px;
+            background: rgba(0, 0, 0, 0.85);
+            cursor: default;
+        }
+
+        .widget-container.mode-checkin .content-focus { opacity: 0; pointer-events: none; }
+        .widget-container.mode-checkin .content-checkin { opacity: 1; pointer-events: auto; }
+
+        .pulse-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background-color: #10B981;
+            animation: pulse 2s infinite;
+            flex-shrink: 0;
+        }
+        
+        .label { font-size: 14px; font-weight: 500; white-space: nowrap; }
+        .checkin-text { display: flex; flex-direction: column; gap: 4px; }
+        .checkin-title { font-size: 12px; opacity: 0.6; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .checkin-subtitle { font-size: 13px; width: 240px; line-height: 1.4; color: rgba(255,255,255,0.9) !important; }
+        .svg-container { transform: rotate(-90deg); margin-left: 10px; }
     `;
     shadowRoot.appendChild(style);
 
     const container = document.createElement("div");
-    container.style.cssText = `all: initial; position: fixed; inset: 0; pointer-events: none;`;
+    container.className = "widget-container";
 
-    const overlay = document.createElement("div");
-    overlay.className = "session-overlay";
+    const focusContent = document.createElement("div");
+    focusContent.className = "content-focus";
+    
+    const pulseDot = document.createElement("div");
+    pulseDot.className = "pulse-dot";
+    
+    const label = document.createElement("div");
+    label.className = "label";
+    label.textContent = "Focus sessie";
 
-    // ── Drag vs click detection ──
+    focusContent.appendChild(pulseDot);
+    focusContent.appendChild(label);
+
+    const checkinContent = document.createElement("div");
+    checkinContent.className = "content-checkin";
+    checkinContent.innerHTML = `
+        <div class="checkin-text">
+            <div class="checkin-title">Ben je er nog?</div>
+            <div class="checkin-subtitle">
+                Beweeg je muis om door te gaan. Zonder actie stopt de sessie.
+            </div>
+        </div>
+        <div class="svg-container">
+             <svg width="44" height="44">
+                <circle r="${CHECKIN_RADIUS}" cx="22" cy="22" stroke="white" stroke-width="3" opacity="0.2" fill="none" />
+                <circle id="progress-circle" r="${CHECKIN_RADIUS}" cx="22" cy="22" stroke="white" stroke-width="3" fill="none"
+                    stroke-dasharray="${CHECKIN_CIRCUMFERENCE}" stroke-dashoffset="0" stroke-linecap="round" />
+            </svg>
+        </div>
+    `;
+
+    container.appendChild(focusContent);
+    container.appendChild(checkinContent);
+    shadowRoot.appendChild(container);
+
+    // --- Drag & Snap Logica met Click-fix ---
     let isDragging = false;
-    let moved = false;
-    let startX = 0;
-    let startY = 0;
-    let currentX = window.innerWidth / 2;
-    let currentY = 48;
-    const DRAG_THRESHOLD = 5; // px
+    let dragHasStarted = false; // Vlag om onderscheid te maken tussen klik en drag
+    let startX, startY;
+    let initialLeft, initialTop;
+    const DRAG_THRESHOLD = 5; // Hoeveelheid pixels bewegen voor het telt als slepen
 
-    const updatePosition = () => {
-        overlay.style.left = `${currentX}px`;
-        overlay.style.top = `${currentY}px`;
-        overlay.style.transform = `translate(-50%, -50%)`;
-    };
-    updatePosition();
+    container.addEventListener("mousedown", (e) => {
+        if (container.classList.contains('mode-checkin')) return;
+        
+        startX = e.clientX;
+        startY = e.clientY;
+        
+        const rect = container.getBoundingClientRect();
+        initialLeft = rect.left;
+        initialTop = rect.top;
 
-    overlay.addEventListener("mousedown", (e) => {
         isDragging = true;
-        moved = false;
-        startX = e.clientX - currentX;
-        startY = e.clientY - currentY;
+        dragHasStarted = false; // Reset bij elke nieuwe klik
         e.preventDefault();
     });
 
     window.addEventListener("mousemove", (e) => {
         if (!isDragging) return;
+        
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
 
-        const nextX = e.clientX - startX;
-        const nextY = e.clientY - startY;
-
-        if (
-            Math.abs(nextX - currentX) > DRAG_THRESHOLD ||
-            Math.abs(nextY - currentY) > DRAG_THRESHOLD
-        ) {
-            moved = true;
+        // Pas als we voorbij de drempel zijn, schakelen we de visuele drag in
+        if (!dragHasStarted && distance > DRAG_THRESHOLD) {
+            dragHasStarted = true;
+            container.style.transition = 'none';
+            container.style.right = 'auto';
+            container.style.bottom = 'auto';
+            container.style.transform = 'none';
         }
 
-        currentX = nextX;
-        currentY = nextY;
-        updatePosition();
+        if (dragHasStarted) {
+            container.style.left = `${initialLeft + dx}px`;
+            container.style.top = `${initialTop + dy}px`;
+        }
     });
 
     window.addEventListener("mouseup", () => {
+        if (!isDragging) return;
         isDragging = false;
-    });
+        
+        // Alleen snappen als er daadwerkelijk gesleept is
+        if (dragHasStarted) {
+            container.style.transition = `
+                width 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+                height 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+                top 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+                left 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+                border-radius 0.3s ease
+            `;
 
-    overlay.addEventListener("click", (e) => {
-        if (moved) {
+            const rect = container.getBoundingClientRect();
+            const winW = window.innerWidth;
+            const winH = window.innerHeight;
+            
+            const isLeft = rect.left + rect.width / 2 < winW / 2;
+            const isTop = rect.top + rect.height / 2 < winH / 2;
+            
+            const SNAP_MARGIN = '0px';
+            const DOCKED_RADIUS = '0px';
+            const DEFAULT_RADIUS = '10px';
+
+            lastSnapPosition = { top: 'auto', bottom: 'auto', left: 'auto', right: 'auto', borderRadius: DEFAULT_RADIUS };
+
+            if (isTop && isLeft) {
+                lastSnapPosition.top = SNAP_MARGIN; 
+                lastSnapPosition.left = SNAP_MARGIN;
+                lastSnapPosition.borderRadius = `${DOCKED_RADIUS} ${DEFAULT_RADIUS} ${DEFAULT_RADIUS} ${DEFAULT_RADIUS}`;
+            } else if (isTop && !isLeft) {
+                lastSnapPosition.top = SNAP_MARGIN; 
+                lastSnapPosition.right = SNAP_MARGIN;
+                lastSnapPosition.borderRadius = `${DEFAULT_RADIUS} ${DOCKED_RADIUS} ${DEFAULT_RADIUS} ${DEFAULT_RADIUS}`;
+            } else if (!isTop && isLeft) {
+                lastSnapPosition.bottom = SNAP_MARGIN; 
+                lastSnapPosition.left = SNAP_MARGIN;
+                lastSnapPosition.borderRadius = `${DEFAULT_RADIUS} ${DEFAULT_RADIUS} ${DEFAULT_RADIUS} ${DOCKED_RADIUS}`;
+            } else {
+                lastSnapPosition.bottom = SNAP_MARGIN; 
+                lastSnapPosition.right = SNAP_MARGIN;
+                lastSnapPosition.borderRadius = `${DEFAULT_RADIUS} ${DEFAULT_RADIUS} ${DOCKED_RADIUS} ${DEFAULT_RADIUS}`;
+            }
+
+            applySnapPosition(container);
+        }
+    });
+    
+    container.addEventListener("click", (e) => {
+        // Als we hebben gesleept, blokkeren we de klik-actie
+        if (dragHasStarted) {
             e.preventDefault();
             e.stopPropagation();
             return;
         }
-        chrome.runtime.sendMessage({ type: "studyuren:focus-studyuren-tab" });
+
+        if (!container.classList.contains('mode-checkin')) {
+            chrome.runtime.sendMessage({ type: "studyuren:focus-studyuren-tab" });
+        }
     });
 
-    const pulseDot = document.createElement("div");
-    pulseDot.style.cssText = `
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background-color: #10B981;
-        animation: pulse 2s infinite;
-    `;
-
-    const label = document.createElement("p");
-    label.textContent = "Focus sessie";
-    label.style.cssText = "margin: 0; font-weight: 500; white-space: nowrap;";
-
-    const checkinCard = document.createElement("div");
-    checkinCard.style.cssText = `
-        display: none;
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        width: 180px;
-        height: 60px;
-        background: rgba(0,0,0,0.85);
-        backdrop-filter: blur(10px);
-        color: white;
-        border-radius: 12px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        font-family: "Google Sans", sans-serif;
-        font-size: 14px;
-        z-index: 2147483647;
-        pointer-events: auto;
-    `;
-
-    const checkinTimerText = document.createElement("span");
-    checkinTimerText.textContent = "10s";
-
-    const checkinTimerCircle = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    checkinTimerCircle.setAttribute("width", "40");
-    checkinTimerCircle.setAttribute("height", "40");
-    checkinTimerCircle.innerHTML = `
-        <circle cx="20" cy="20" r="${CHECKIN_RADIUS}" stroke="#10B981" stroke-width="4" fill="none"
-            stroke-dasharray="${CHECKIN_CIRCUMFERENCE}" stroke-dashoffset="${CHECKIN_CIRCUMFERENCE}" />
-    `;
-
-    checkinCard.appendChild(checkinTimerCircle);
-    checkinCard.appendChild(checkinTimerText);
-    container.appendChild(checkinCard);
-
-
-    overlay.appendChild(pulseDot);
-    overlay.appendChild(label);
-    refs.checkinCard = checkinCard;
-    refs.checkinTimerCircle = checkinTimerCircle.querySelector("circle");
-    refs.checkinTimerText = checkinTimerText;
-
-
-    container.appendChild(overlay);
-    shadowRoot.appendChild(container);
+    const progressCircle = checkinContent.querySelector("#progress-circle");
 
     return {
         host: shadowHost,
@@ -461,8 +577,8 @@ function createFocusOverlay() {
             pulseDot,
             label,
             shakeIcon: null,
-            checkinCard: null,
-            checkinTimerCircle: null,
+            container: container,
+            checkinTimerCircle: progressCircle,
             checkinTimerText: null
         }
     };
