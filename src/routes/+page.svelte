@@ -129,6 +129,22 @@
 			showCustomWallpaperChooser = true;
 		};
 
+		let wakeLock: any = null;
+
+		async function keepScreenAwake() {
+			try {
+				wakeLock = await navigator.wakeLock.request("screen");
+			} catch (err) {
+				console.error(err);
+			}
+		}
+
+		document.addEventListener("visibilitychange", () => {
+			if (wakeLock !== null && document.visibilityState === "visible") {
+				keepScreenAwake();
+			}
+		});
+
 		app.background = localStorage.getItem("background") || "8.webp";
 
 		const hasFocus = () => {
