@@ -4,7 +4,7 @@
 	let { extConnected = $bindable(false), needsUpdate = $bindable(false) } =
 		$props();
 
-	let checkTimeout: number | undefined;
+	let checkTimeout: any;
 
 	onMount(() => {
 		checkExtension();
