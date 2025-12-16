@@ -18,8 +18,7 @@
                 "<all_urls>"
             ],
             "js": [
-                "content.js",
-                "somtoday.js"
+                "content.js"
             ]
         }
     ],
