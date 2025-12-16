@@ -1,12 +1,16 @@
-let ALLOWED_SITES = ["itslearning.com", "somtoday.nl", "bijsven.nl", "studygo.com", "chatgpt.com" ];
+let ALLOWED_SITES = [];
+let allowedSitesReady = false;
 
 fetch("https://studyuren.bijsven.nl/allowed_sites.json")
     .then(res => res.json())
     .then(data => {
         ALLOWED_SITES = data;
+        allowedSitesReady = true;
+        console.log('[Background] Allowed sites loaded:', ALLOWED_SITES);
     })
     .catch(() => {
-        // keep the fallback list if remote fetch fails
+        ALLOWED_SITES = ["itslearning.com", "somtoday.nl"];
+        allowedSitesReady = true;
     });
 
 let sessionActive = false;
@@ -56,14 +60,32 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             break;
             
         case "studyuren:check-in-start":
-            // Broadcast check-in start to all other tabs with timing data
             broadcastCheckIn(true, msg.data);
             break;
 
         case "studyuren:check-in-end":
-            // Broadcast check-in end to all tabs
             broadcastCheckIn(false, msg.data);
             break;
+
+        case "studyuren:is-allowed": {
+            if (!allowedSitesReady) {
+                sendResponse({ allowed: true });
+                return true;
+            }
+
+            try {
+                const hostname = new URL(msg.url).hostname;
+                const allowed = ALLOWED_SITES.some(site =>
+                    hostname.includes(site)
+                );
+                sendResponse({ allowed });
+            } catch {
+                sendResponse({ allowed: true });
+            }
+            return true;
+        }
+
+
     }
 });
 
@@ -220,9 +242,17 @@ chrome.tabs.onRemoved.addListener((tabId) => {
     }
 });
 
-function closeExistingBlockedTabs() {    
+function closeExistingBlockedTabs() {
     console.log('[Background] Check alle bestaande tabs voor niet-toegestane sites');
     
+    if (!allowedSitesReady) {
+        console.log('[Background] Allowed sites not ready yet');
+        setTimeout(() => {
+            closeExistingBlockedTabs();
+        }, 1500);
+        return;
+    }
+
     chrome.tabs.query({}, (tabs) => {
         tabs.forEach(tab => {
             if (!tab.url || !tab.id) return;

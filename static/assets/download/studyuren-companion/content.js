@@ -1,17 +1,14 @@
-let ALLOWED_SITES = ["itslearning.com", "somtoday.nl", "bijsven.nl", "studygo.com", "chatgpt.com", "claude.ai"];
+let ALLOWED_SITES = [];
 
 fetch("https://studyuren.bijsven.nl/allowed_sites.json")
     .then(res => res.json())
     .then(data => {
         ALLOWED_SITES = data;
     })
-    .catch(() => {
-        // keep fallback list on failure
-    });
 
 let sessionActive = false;
 let overlayRoot = null;
-let requestingActivity = false; // reserved for future use; check-ins now follow website events
+let requestingActivity = false;
 let overlayElements = null;
 let checkInInterval = null;
 let checkInState = {
@@ -225,23 +222,16 @@ if (!isStudyurenPage) {
 }
 
 function handleSessionStart() {
-    if (sessionActive) {
-        return;
-    }
-    sessionActive = true;
-    lastActivity = Date.now(); // Reset activity timer
+    if (sessionActive) return;
 
-    if (!isStudyurenPage && isAllowedSite()) {
-        showOverlay();
-    }
-    
-    if (!isStudyurenPage && !isAllowedSite()) {
-        chrome.runtime.sendMessage({
-            type: "studyuren:block-site",
-            data: { url: window.location.href }
-        });
+    sessionActive = true;
+    lastActivity = Date.now();
+
+    if (!isStudyurenPage) {
+        isAllowedSite();
     }
 }
+
 
 function handleSessionEnd() {
     if (!sessionActive) {
@@ -254,8 +244,23 @@ function handleSessionEnd() {
 }
 
 function isAllowedSite() {
-    return ALLOWED_SITES.some(site => window.location.hostname.includes(site));
+    chrome.runtime.sendMessage(
+        { type: "studyuren:is-allowed", url: window.location.href },
+        (res) => {
+            if (!res) return;
+
+            if (!res.allowed && sessionActive) {
+                chrome.runtime.sendMessage({
+                    type: "studyuren:block-site",
+                    data: { url: window.location.href }
+                });
+            } else {
+                showOverlay();
+            }
+        }
+    );
 }
+
 
 function showOverlay() {
     if (overlayRoot) return;
@@ -423,19 +428,4 @@ function createFocusOverlay() {
             checkinTimerText: null
         }
     };
-}
-
-
-
-if (!isStudyurenPage && !isAllowedSite()) {
-    chrome.runtime.sendMessage({ type: "studyuren:check-session" });
-    
-    setTimeout(() => {
-        if (sessionActive) {
-            chrome.runtime.sendMessage({
-                type: "studyuren:block-site",
-                data: { url: window.location.href }
-            });
-        }
-    }, 500);
 }
