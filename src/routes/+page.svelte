@@ -33,6 +33,7 @@
 	let showExtensionUseHint = $state(true);
 	let extensionNeedsUpdate = $state(false);
 	let showCustomWallpaperChooser = $state(false);
+	let showReleaseNotes = $state(false);
 
 	let blockedAction = $state({
 		visible: false,
@@ -146,6 +147,25 @@
 		});
 
 		app.background = localStorage.getItem("background") || "8.webp";
+		if (app.background.endsWith(".webp")) {
+			app.background = "/assets/background/" + app.background;
+		} else if (app.background === "local") {
+			const request = indexedDB.open("application", 1);
+
+			request.onsuccess = (event) => {
+				const db = (event.target as IDBOpenDBRequest).result;
+				const transaction = db.transaction("images", "readonly");
+				const store = transaction.objectStore("images");
+
+				const getRequest = store.get("background");
+				getRequest.onsuccess = () => {
+					const file = getRequest.result as File | undefined;
+					if (file) {
+						app.background = URL.createObjectURL(file);
+					}
+				};
+			};
+		}
 
 		const hasFocus = () => {
 			return (
@@ -283,6 +303,14 @@
 			safeOnlineUsers = (otherOnline ?? [])
 				.map((o: any) => o?.expand?.user?.expand?.user)
 				.filter((u: any) => u && u.id !== app.user.id);
+
+			if (
+				localStorage.getItem("releaseNotes") !== "v0.1.28" &&
+				localStorage.getItem("user:id")
+			) {
+				showReleaseNotes = true;
+				localStorage.setItem("releaseNotes", "v0.1.28");
+			}
 		})();
 
 		(async () => {
@@ -521,7 +549,7 @@
 	>
 		<img
 			bind:this={image}
-			src="/assets/background/{app.background}"
+			src={app.background}
 			alt="Background"
 			class="object-cover h-full w-full"
 		/>
@@ -541,6 +569,81 @@
 				<NumberFlow value={formatTime(app.counter)["s"]} />
 			</div>
 
+			{#if showReleaseNotes}
+				<div
+					transition:fade={{ duration: 400 }}
+					class="fixed inset-0 backdrop-blur-3xl bg-black/30 z-30"
+				></div>
+
+				<div
+					in:fly={{ duration: 500, y: 20, easing: cubicOut }}
+					out:fly={{ duration: 300, y: 10, opacity: 0 }}
+					class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-9999
+					w-[90%] max-w-2xl"
+				>
+					<div
+						class="backdrop-blur-2xl bg-white/10 border border-white/20 rounded-3xl shadow-2xl overflow-hidden"
+					>
+						<div class="px-6 py-5 border-b border-white/10">
+							<div class="flex items-center justify-between">
+								<h2 class="text-xl font-semibold text-white/95">
+									Release notes
+								</h2>
+								<button
+									onclick={() => (showReleaseNotes = false)}
+									class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20
+										flex items-center justify-center transition-all duration-200
+										hover:scale-105 active:scale-95"
+									aria-label="Close"
+								>
+									<svg
+										class="w-4 h-4 text-white/80"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M6 18L18 6M6 6l12 12"
+										/>
+									</svg>
+								</button>
+							</div>
+						</div>
+
+						<div
+							class="p-6 overflow-y-auto max-h-[60vh] custom-scrollbar text-sm"
+						>
+							<div class="prose prose-invert max-w-none">
+								<p>
+									Welkom bij v0.1.28 van Studyuren. In deze
+									versie zijn een paar nieuwe toevoegingen:
+								</p>
+								<ul class="list-disc ml-6 mt-2">
+									<li>
+										Studyuren Companion heeft nu een update
+										waarmee je op dezelfde pagina meldingen
+										krijgt van Studyuren.
+									</li>
+									<li>
+										Je kan nu achtergronden instellen door
+										op "{scoreShow} XP" te klikken, instellingen,
+										en een achtergrond te kiezen. Sinds 16-12-25
+										kan je nu ook custom achtergronden. toevoegen.
+									</li>
+									<li>
+										Studyuren zal nu minder vaak vragen of
+										je activiteit wilt laten zien.
+									</li>
+								</ul>
+							</div>
+						</div>
+					</div>
+				</div>
+			{/if}
+
 			{#if showCustomWallpaperChooser}
 				<div
 					transition:fade={{ duration: 400 }}
@@ -551,7 +654,7 @@
 					in:fly={{ duration: 500, y: 20, easing: cubicOut }}
 					out:fly={{ duration: 300, y: 10, opacity: 0 }}
 					class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40
-		       w-[90%] max-w-2xl"
+					w-[90%] max-w-2xl"
 				>
 					<div
 						class="backdrop-blur-2xl bg-white/10 border border-white/20 rounded-3xl shadow-2xl overflow-hidden"
@@ -565,8 +668,8 @@
 									onclick={() =>
 										(showCustomWallpaperChooser = false)}
 									class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20
-						       flex items-center justify-center transition-all duration-200
-						       hover:scale-105 active:scale-95"
+										flex items-center justify-center transition-all duration-200
+										hover:scale-105 active:scale-95"
 									aria-label="Close"
 								>
 									<svg
@@ -601,9 +704,9 @@
 											showCustomWallpaperChooser = false;
 										}}
 										class="group relative aspect-video rounded-2xl overflow-hidden
-							       ring-2 ring-transparent hover:ring-white/40
-							       transition-all duration-300 hover:scale-[1.02]
-							       active:scale-[0.98]"
+											ring-2 ring-transparent hover:ring-white/40
+											transition-all duration-300 hover:scale-[1.02]
+											active:scale-[0.98]"
 									>
 										<img
 											src="/assets/background/{i +
@@ -615,12 +718,12 @@
 
 										<div
 											class="absolute inset-0 from-black/50 to-transparent
-							            opacity-0 group-hover:opacity-100 transition-opacity duration-300
-							            flex items-end justify-center pb-3"
+													opacity-0 group-hover:opacity-100 transition-opacity duration-300
+													flex items-end justify-center pb-3"
 										>
 											<span
 												class="text-xs font-medium text-white/90 backdrop-blur-sm
-								             bg-white/20 px-3 py-1 rounded-full"
+													bg-white/20 px-3 py-1 rounded-full"
 											>
 												Select
 											</span>
@@ -629,7 +732,7 @@
 										{#if app.background === i + 1 + ".webp"}
 											<div
 												class="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/90
-								            flex items-center justify-center shadow-lg"
+													flex items-center justify-center shadow-lg"
 											>
 												<svg
 													class="w-4 h-4 text-black"
@@ -646,6 +749,94 @@
 										{/if}
 									</button>
 								{/each}
+
+								<label
+									class="group relative aspect-video rounded-2xl overflow-hidden border-2 border-dashed border-white/40
+										flex items-center justify-center text-white/80 cursor-pointer hover:border-white/80
+										transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] text-sm"
+								>
+									<input
+										type="file"
+										accept="image/*"
+										class="hidden"
+										onchange={async (e) => {
+											const input =
+												e.target as HTMLInputElement;
+											const file = input.files?.[0];
+											if (!file) return;
+
+											const request = indexedDB.open(
+												"application",
+												1
+											);
+
+											request.onupgradeneeded = (
+												event
+											) => {
+												const db = (
+													event.target as IDBOpenDBRequest
+												).result;
+												if (
+													!db.objectStoreNames.contains(
+														"images"
+													)
+												) {
+													db.createObjectStore(
+														"images"
+													);
+												}
+											};
+
+											request.onsuccess = (event) => {
+												const db = (
+													event.target as IDBOpenDBRequest
+												).result;
+												const transaction =
+													db.transaction(
+														"images",
+														"readwrite"
+													);
+												const store =
+													transaction.objectStore(
+														"images"
+													);
+
+												store.put(file, "background");
+
+												transaction.oncomplete = () => {
+													localStorage.setItem(
+														"background",
+														"local"
+													);
+
+													app.background =
+														URL.createObjectURL(
+															file
+														);
+
+													showCustomWallpaperChooser = false;
+												};
+
+												transaction.onerror = (err) => {
+													console.error(
+														"IndexedDBStorageError",
+														err
+													);
+												};
+											};
+
+											request.onerror = (err) => {
+												console.error(
+													"IndexedDBStorageError2",
+													err
+												);
+											};
+										}}
+									/>
+									<span class="text-center">
+										Upload custom
+									</span>
+								</label>
 							</div>
 						</div>
 					</div>
