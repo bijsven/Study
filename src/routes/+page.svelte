@@ -735,13 +735,13 @@
 
 			{#if showExtensionInstructions}
 				<div
-					class="backdrop-blur-xl bg-black/75 absolute top-0 left-0 h-full w-full"
+					class="backdrop-blur-xl bg-black/75 z-999 absolute top-0 left-0 h-full w-full"
 					transition:fade={{ duration: 500 }}
 				></div>
 				<div
 					in:fly={{ duration: 500, y: -10, easing: cubicOut }}
 					out:fly={{ duration: 500, y: 10 }}
-					class="absolute top-[50%] left-[50%] translate-x-[-50%] z-40 translate-y-[-50%] flex flex-col items-center gap-4 px-6 py-8 max-w-md w-full"
+					class="absolute top-[50%] left-[50%] translate-x-[-50%] z-999 translate-y-[-50%] flex flex-col items-center gap-4 px-6 py-8 max-w-md w-full"
 				>
 					<div class="flex items-left gap-2 text-white text-2xl">
 						<h1 class="font-semibold">
