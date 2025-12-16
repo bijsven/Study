@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { fly } from "svelte/transition";
+	import { tweened } from "svelte/motion";
+	import { linear } from "svelte/easing";
 
-	const defaultDuration = 10;
 	const radius = 20;
 	const circumference = 2 * Math.PI * radius;
 
@@ -11,13 +12,23 @@
 		duration: incomingDuration,
 	} = $props();
 
-	let offset = $state(0);
+	const offset = tweened(0, {
+		duration: 1000,
+		easing: linear,
+	});
+
 	let hasCompleted = $state(false);
 
 	$effect(() => {
 		const safeDuration = incomingDuration;
 		const progress = Math.max(0, Math.min(remaining / safeDuration, 1));
-		offset = circumference * (1 - progress);
+
+		const targetOffset = circumference * (1 - progress);
+		const isResetting = targetOffset < $offset;
+
+		offset.set(targetOffset, {
+			duration: isResetting ? 0 : 1000,
+		});
 
 		if (remaining <= 0 && !hasCompleted) {
 			hasCompleted = true;
@@ -62,9 +73,8 @@
 			stroke-width="4"
 			fill="none"
 			stroke-dasharray={circumference}
-			stroke-dashoffset={offset}
+			stroke-dashoffset={$offset}
 			stroke-linecap="round"
-			style="transition: stroke-dashoffset 0.5s linear;"
 		/>
 	</svg>
 </div>

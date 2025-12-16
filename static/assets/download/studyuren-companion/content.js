@@ -290,10 +290,6 @@ function updateOverlayState() {
         pulseDot.style.animation = 'pulse 2s infinite';
     }
 
-    if (label) {
-        label.textContent = 'Studyuren Sessie';
-    }
-
     if (shakeIcon) {
         shakeIcon.style.display = 'none';
     }
@@ -411,8 +407,50 @@ function createFocusOverlay() {
     label.textContent = "Focus sessie";
     label.style.cssText = "margin: 0; font-weight: 500; white-space: nowrap;";
 
+    const checkinCard = document.createElement("div");
+    checkinCard.style.cssText = `
+        display: none;
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 180px;
+        height: 60px;
+        background: rgba(0,0,0,0.85);
+        backdrop-filter: blur(10px);
+        color: white;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-family: "Google Sans", sans-serif;
+        font-size: 14px;
+        z-index: 2147483647;
+        pointer-events: auto;
+    `;
+
+    const checkinTimerText = document.createElement("span");
+    checkinTimerText.textContent = "10s";
+
+    const checkinTimerCircle = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    checkinTimerCircle.setAttribute("width", "40");
+    checkinTimerCircle.setAttribute("height", "40");
+    checkinTimerCircle.innerHTML = `
+        <circle cx="20" cy="20" r="${CHECKIN_RADIUS}" stroke="#10B981" stroke-width="4" fill="none"
+            stroke-dasharray="${CHECKIN_CIRCUMFERENCE}" stroke-dashoffset="${CHECKIN_CIRCUMFERENCE}" />
+    `;
+
+    checkinCard.appendChild(checkinTimerCircle);
+    checkinCard.appendChild(checkinTimerText);
+    container.appendChild(checkinCard);
+
+
     overlay.appendChild(pulseDot);
     overlay.appendChild(label);
+    refs.checkinCard = checkinCard;
+    refs.checkinTimerCircle = checkinTimerCircle.querySelector("circle");
+    refs.checkinTimerText = checkinTimerText;
+
 
     container.appendChild(overlay);
     shadowRoot.appendChild(container);

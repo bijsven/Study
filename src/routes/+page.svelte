@@ -418,7 +418,9 @@
 
 		clearCheckInTimeout();
 
-		const delay = Math.random() * (300000 - 10000) + 10000;
+		const delay = Math.floor(
+			Math.random() * (20 * 60 * 1000 - 5 * 60 * 1000) + 5 * 60 * 1000
+		);
 		checkInTimeout = setTimeout(() => {
 			if (!app.running) return;
 			if (checkInState.active) return;
@@ -777,7 +779,7 @@
 			<div class="mt-52">
 				{#if checkInState.active}
 					<CheckIn
-						duration={checkInState.duration}
+						duration={checkInState.duration || 10}
 						remaining={checkInState.remaining}
 						callback={() => resolveCheckIn(false)}
 					/>
