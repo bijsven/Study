@@ -754,12 +754,12 @@
 							href="/assets/download/studyuren-companion.zip"
 						>
 							link
-						</a>.<br /> 2. Extract de inhoud van de ZIP en plaats de
-						map in Documenten.<br /> 3. Ga naar chrome://extensions
-						en klik op "Developer mode" aan de rechterkant.<br /> 4.
-						Klik op "Load unpacked" en selecteer de map waar je de
-						map "studyuren-companion" hebt geplaatst.<br /> 5. Je hebt
-						nu Studyuren Companion geinstalleerd!
+						</a>.<br /> 2. Klik rechtermuisknop en druk op Alles
+						uitpakken...<br /> 3. Ga naar about://extensions en klik
+						op "Developer mode".<br /> 4. Klik op "Load unpacked"
+						(of "Uitgepakt laden") en selecteer de
+						"studyuren-companion" map.<br /> 5. Je hebt nu de nieuwste
+						versie van Studyuren Companion geinstalleerd!
 					</p>
 					<div class="flex gap-5 items-center justify-center">
 						<button
