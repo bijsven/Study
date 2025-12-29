@@ -47,7 +47,7 @@
 
         if (
             !localStorage.getItem("group") ||
-            !localStorage.getitem("visited")![0]
+            !localStorage.getItem("visited")![0]
         ) {
             alert(
                 "Je was niet ingelogd. Redirecting naar normale inlogpaneel.",
