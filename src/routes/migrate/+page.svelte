@@ -54,9 +54,9 @@
             window.location.href = "https://tussenuren.bijsven.nl";
         } else if (
             !localStorage.getItem("group") ||
-            !JSON.parse(localStorage.getItem("visited")!)![0]
+            !JSON.parse(localStorage.getItem("visited")!)[0]
         ) {
-            goto("/account");
+            goto("/migrate?notfine");
         }
 
         users = await pb.collection("legacy_members").getFullList({
@@ -81,6 +81,10 @@
             migrated: boolean;
         };
 
+        const groupId =
+            localStorage.getItem("group")! ||
+            JSON.parse(localStorage.getItem("visited")!)![0];
+
         let newUser = {
             password: "shallnotbeused",
             passwordConfirm: "shallnotbeused",
@@ -89,9 +93,7 @@
             data: {
                 somtoday_calendar: user.ical_link,
             },
-            groups:
-                localStorage.getItem("group")! ||
-                JSON.parse(localStorage.getItem("visited")!)![0],
+            groups: groupId,
         };
 
         progress_finalize = "Account aanmaken";
@@ -105,7 +107,7 @@
                 .collection("legacy_studyuren")
                 .getOne(localStorage.getItem("user:id")!, {
                     query: {
-                        groupId: localStorage.getItem("group")!,
+                        groupId,
                     },
                 });
 
@@ -136,7 +138,7 @@
             },
             {
                 query: {
-                    groupId: localStorage.getItem("group")!,
+                    groupId,
                 },
             },
         );
@@ -173,10 +175,10 @@
     </div>
 
     <div
-        class="z-10 top-0 left-0 text-white absolute h-full w-full flex justify-between items-center px-52"
+        class="z-10 top-0 left-0 text-white absolute h-full w-full flex lg:flex-row flex-col justify-center lg:justify-between items-center px-8 lg:px-52"
     >
         {#if progress == 0}
-            <div class="w-96">
+            <div class="lg:w-96 lg:mt-0 mt-48 lg:mb-0 mb-8">
                 <p class="text-3xl font-semibold">Selecteer je gebruiker</p>
                 <p class="opacity-65 mt-1">
                     Dit is de Study Migrator. Je selecteert je gebruiker en
@@ -186,7 +188,7 @@
             </div>
 
             <div
-                class="flex flex-col gap-3 h-128 overflow-y-auto p-3 min-w-fit"
+                class="flex flex-col gap-3 lg:h-128 overflow-y-auto p-3 min-w-fit"
             >
                 {#each users as user}
                     {#if user.migrated == false}
@@ -209,7 +211,7 @@
                 {/each}
             </div>
         {:else if progress == 1}
-            <div class="w-96">
+            <div class="lg:w-96 lg:mb-0 mb-8">
                 <p
                     in:fly={{ duration: 500, y: 5 }}
                     class="text-3xl font-semibold"

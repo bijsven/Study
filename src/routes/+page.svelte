@@ -12,11 +12,6 @@
             window.location.href = "/account";
         } else {
             loaded = true;
-
-            // if (!sessionStorage.getItem("movement_alreadydone")) {
-            //     goto(localStorage.getItem("history") || "/");
-            //     sessionStorage.setItem("movement_alreadydone", "true");
-            // }
         }
     });
 </script>
@@ -37,9 +32,9 @@
 
     {#if loaded}
         <div
-            class="z-10 top-0 left-0 text-white absolute h-full w-full flex justify-between items-center px-52"
+            class="z-10 top-0 left-0 text-white absolute h-full w-full flex lg:justify-between justify-center flex-col lg:flex-row items-center px-8 lg:px-52"
         >
-            <div class="w-96">
+            <div class="lg:w-96">
                 <p
                     transition:fly={{ duration: 300, y: 5 }}
                     class="text-3xl font-semibold"
@@ -85,10 +80,6 @@
                     </button>
                 </div>
             </div>
-
-            <div
-                class="flex flex-col gap-3 h-128 justify-center items-center overflow-y-auto p-3 min-w-fit"
-            ></div>
         </div>
     {/if}
 </div>

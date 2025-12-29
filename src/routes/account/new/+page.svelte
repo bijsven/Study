@@ -46,9 +46,9 @@
     </div>
 
     <div
-        class="z-10 top-0 left-0 text-white absolute h-full w-full flex justify-between items-center px-52"
+        class="z-10 top-0 left-0 text-white absolute h-full w-full flex lg:flex-row flex-col justify-center lg:justify-between items-center lg:px-52 px-8"
     >
-        <div class="w-96">
+        <div class="lg:w-96">
             {#if email_state == 0}
                 <p class="text-3xl font-semibold">Nieuw account</p>
                 <p class="opacity-65 mt-1">
@@ -66,7 +66,7 @@
         </div>
 
         <div
-            class="flex flex-col gap-3 h-128 justify-center items-center overflow-y-auto p-3 min-w-fit"
+            class="flex flex-col gap-3 lg:h-128 lg:mt-0 mt-12 justify-center items-center overflow-y-auto p-3 min-w-fit"
         >
             <div
                 class="h-12 w-80 overflow-hidden rounded-2xl bg-white/10 shadow-lg backdrop-blur-md"

@@ -43,7 +43,9 @@
     <title>Account - Study</title>
 </svelte:head>
 
-<div class="absolute h-full w-full inset-0 top-0 left-0 bg-black">
+<div
+    class="absolute h-full w-full inset-0 top-0 left-0 bg-black overflow-hidden"
+>
     <div>
         <img
             src="/assets/background/3.webp"
@@ -59,10 +61,10 @@
 
     {#if loaded}
         <div
-            class="z-10 top-0 left-0 text-white absolute h-full w-full flex justify-between items-center px-52"
+            class="z-10 top-0 overflow-hidden left-0 text-white absolute h-full w-full flex flex-col lg:flex-row justify-center lg:justify-between items-center px-8 lg:px-52"
         >
             {#if appstate == 0}
-                <div class="w-96">
+                <div class="lg:w-96">
                     <p class="text-3xl font-semibold">Welkom terug!</p>
                     <p class="opacity-65 mt-1">
                         bij je Study account. Hiermee krijg je toegang tot
@@ -85,7 +87,7 @@
                 </div>
 
                 <div
-                    class="flex flex-col gap-3 h-128 justify-center items-center overflow-y-auto p-3 min-w-fit"
+                    class="flex flex-col gap-3 lg:mt-0 mt-12 lg:h-128 justify-center items-center overflow-y-auto p-3 min-w-fit"
                 >
                     <div
                         class="h-12 w-80 overflow-hidden rounded-2xl bg-white/10 shadow-lg backdrop-blur-md"
@@ -129,7 +131,7 @@
                     {/key}
                 </div>
             {:else}
-                <div class="w-96">
+                <div class="lg:w-96">
                     <p
                         transition:fly={{ duration: 300, y: 5 }}
                         class="text-3xl font-semibold"
@@ -188,7 +190,7 @@
 
                 <div
                     transition:fade
-                    class="flex flex-col gap-3 h-128 justify-center items-center overflow-y-auto p-3 min-w-fit"
+                    class="flex flex-col gap-3 lg:h-128 justify-center items-center overflow-y-auto p-3 min-w-fit"
                 >
                     <div>
                         <p class="text-sm opacity-65 mb-1 pl-1">Email</p>
