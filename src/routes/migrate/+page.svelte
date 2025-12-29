@@ -18,6 +18,15 @@
 
         const params = new URLSearchParams(window.location.search);
         const data = params.get("data");
+        const service = params.get("service");
+
+        if (service) {
+            if (service === "tussenuren") {
+                goto("/breaks");
+            } else if (service === "studyuren") {
+                goto("/study");
+            }
+        }
 
         if (data) {
             try {
