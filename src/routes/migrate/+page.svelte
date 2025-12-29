@@ -197,15 +197,23 @@
                                 User = user;
                                 progress = 1;
                             }}
-                            class="bg-black/45 backdrop-blur-xl w-96 h-16 rounded-xl flex justify-between items-center p-6 cursor-pointer active:scale-99 active:bg-white active:text-black hover:scale-101 duration-100"
+                            class="bg-black/45 backdrop-blur-xl lg:w-96 w-full h-16 rounded-xl flex justify-between items-center p-6 cursor-pointer active:scale-99 active:bg-white active:text-black hover:scale-101 duration-100"
                         >
                             <p>{user.username}</p>
                         </button>
                     {:else}
                         <button
-                            class="bg-black/45 opacity-40 cursor-not-allowed backdrop-blur-xl w-96 h-16 rounded-xl flex justify-between items-center p-6 duration-100"
+                            onclick={() => {
+                                goto("/account");
+                            }}
+                            class="bg-black/45 opacity-40 hover:opacity-100 cursor-pointer hover:scale-101 backdrop-blur-xl w-full lg:w-96 h-16 rounded-xl flex justify-between items-center p-6 duration-100"
                         >
-                            <p>{user.username}</p>
+                            <p class="text-left">
+                                {user.username}
+                                <span class="opacity-65"
+                                    >- Klaar, klik om in te loggen</span
+                                >
+                            </p>
                         </button>
                     {/if}
                 {/each}
