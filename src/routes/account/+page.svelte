@@ -1,6 +1,7 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
     import { pb } from "@/index";
+    import { Plus } from "lucide-svelte";
     import { onMount } from "svelte";
     import { fly, fade } from "svelte/transition";
 
@@ -68,21 +69,19 @@
                         Tussen- en Studyuren. Alleen je e-mail is nodig om in te
                         loggen.
                     </p>
-                    <button
-                        onclick={() => {
-                            alert(
-                                "Dit is nog niet toegevoegd. Weet je zeker dat je geen oude gebruiker was van Tussenuren? Dan moet je klikken op 'migrate' vanuit daar worden je oude gegevens opgehaald en een nieuw account aangemaakt.",
-                            );
-                        }}
-                        class="mt-4 opacity-65 cursor-pointer hover:opacity-100 hover:scale-101 duration-200"
-                    >
-                        Nieuw account
-                    </button>
-                    <a
-                        href="/migrate"
-                        class="mt-4 ml-4 opacity-65 cursor-pointer hover:opacity-100 hover:scale-101 duration-200"
-                        >Overstappen
-                    </a>
+                    <div class="mt-4 text-xs">
+                        <a
+                            href="/account/new"
+                            class="mt-4 opacity-65 cursor-pointer hover:opacity-100 hover:scale-101 hover:font-semibold duration-200"
+                        >
+                            Nieuw account
+                        </a>
+                        <a
+                            href="/migrate"
+                            class="mt-4 ml-4 opacity-65 cursor-pointer hover:opacity-100 hover:scale-101 hover:font-semibold duration-200"
+                            >Overstappen
+                        </a>
+                    </div>
                 </div>
 
                 <div
@@ -146,7 +145,7 @@
                         aan verbonden. Deze pagina wordt later vernieuwd met
                         meer opties.
                     </p>
-                    <div class="flex justify-between items-center mt-3">
+                    <div class="flex flex-col items-start gap-2 mt-3">
                         <a
                             transition:fly={{ duration: 500, y: 5, delay: 150 }}
                             href="/"
@@ -166,6 +165,23 @@
                             class="text-xs opacity-30 hover:opacity-100 duration-300 hover:text-red-400 hover:font-semibold cursor-pointer"
                         >
                             Uitloggen
+                        </button>
+                        <button
+                            onclick={async () => {
+                                if (confirm("Account verwijderen?")) {
+                                    await pb
+                                        .collection("users")
+                                        .delete(pb.authStore.record!.id);
+
+                                    pb.authStore.clear();
+                                    localStorage.clear();
+                                    goto("/");
+                                }
+                            }}
+                            transition:fly={{ duration: 500, y: 5, delay: 150 }}
+                            class="text-xs opacity-30 hover:opacity-100 duration-300 hover:text-red-400 hover:font-semibold cursor-pointer"
+                        >
+                            Account verwijderen
                         </button>
                     </div>
                 </div>
@@ -212,29 +228,151 @@
                             <input
                                 bind:value={ical_data}
                                 placeholder="Somtoday Calendar"
-                                disabled
-                                class="h-full w-full rounded-2xl bg-transparent px-5 text-white/65 placeholder-white/60 caret-white transition-all duration-300 focus:ring-2 focus:ring-white/40 focus:ring-offset-1 focus:outline-none"
+                                oninput={(() => {
+                                    let timeout: ReturnType<
+                                        typeof setTimeout
+                                    > | null = null;
+
+                                    return () => {
+                                        if (timeout) clearTimeout(timeout);
+
+                                        timeout = setTimeout(() => {
+                                            if (ical_data.length > 0) {
+                                                pb.collection("users").update(
+                                                    pb.authStore.record!.id,
+                                                    {
+                                                        data: {
+                                                            somtoday_calendar:
+                                                                ical_data,
+                                                        },
+                                                    },
+                                                );
+                                            }
+                                        }, 300);
+                                    };
+                                })()}
+                                class="h-full w-full rounded-2xl bg-transparent px-5 text-white placeholder-white/60 caret-white transition-all duration-300 focus:ring-2 focus:ring-white/40 focus:ring-offset-1 focus:outline-none"
                             />
                         </div>
                     </div>
-                    <div>
+                    <div class="w-full">
                         <p class="text-sm opacity-65 mb-1 pl-1">Groepen</p>
-                        <div
-                            class="h-12 w-80 overflow-hidden rounded-2xl bg-white/10 shadow-lg backdrop-blur-md"
-                        >
-                            {#key groups}
-                                <input
-                                    value={groups.join(", ")}
-                                    placeholder="Groups"
-                                    disabled
-                                    class="h-full w-full rounded-2xl bg-transparent px-5 text-white/65 placeholder-white/60 caret-white transition-all duration-300 focus:ring-2 focus:ring-white/40 focus:ring-offset-1 focus:outline-none"
-                                />
-                            {/key}
+                        <div class="relative w-full max-w-sm">
+                            <details class="relative w-full">
+                                <summary
+                                    class="flex h-12 cursor-pointer list-none items-center justify-between
+                                       rounded-2xl bg-white/10 px-5 text-white/70 shadow-lg
+                                       backdrop-blur-md transition hover:bg-white/15 focus:outline-none"
+                                >
+                                    <span
+                                        >{(pb.authStore.record?.groups).length}
+                                        groepen</span
+                                    >
+
+                                    <svg
+                                        class="h-4 w-4 opacity-60 transition
+                                           [details[open]_&]:rotate-180"
+                                        viewBox="0 0 20 20"
+                                        fill="currentColor"
+                                    >
+                                        <path
+                                            fill-rule="evenodd"
+                                            d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                                            clip-rule="evenodd"
+                                        />
+                                    </svg>
+                                </summary>
+
+                                <div
+                                    class="absolute z-50 mt-2 hidden w-full
+                                       rounded-2xl border border-white/10 bg-black/70
+                                       backdrop-blur-xl shadow-xl
+                                       [details[open]_&]:block"
+                                >
+                                    <ul
+                                        class="max-h-[60vh] overflow-y-auto py-2"
+                                    >
+                                        {#each groups as group}
+                                            <li
+                                                class="px-5 py-3 text-white/70 transition
+                                                   hover:bg-white/10 hover:text-white
+                                                   "
+                                            >
+                                                {group}
+                                            </li>
+                                        {/each}
+                                    </ul>
+
+                                    <div
+                                        class="border-t border-white/10 px-3 py-3 space-y-2"
+                                    >
+                                        <a
+                                            href="/account/newgroup"
+                                            class="flex w-full items-center gap-2 rounded-xl px-3 py-2
+                                               text-white/70 transition hover:bg-white/10 hover:text-white"
+                                        >
+                                            <Plus class="h-4 w-4" />
+                                            Groep maken
+                                        </a>
+
+                                        <div
+                                            class="flex items-center gap-2 rounded-xl bg-white/5 px-3 py-2"
+                                        >
+                                            <span
+                                                class="text-sm text-white/50 shrink-0"
+                                            >
+                                                Deelnemen via code
+                                            </span>
+                                            <input
+                                                onkeydown={async (e) => {
+                                                    if (e.key == "Enter") {
+                                                        const value = (
+                                                            e.currentTarget as HTMLInputElement
+                                                        ).value;
+
+                                                        const groups = [
+                                                            ...(pb.authStore
+                                                                .record
+                                                                ?.groups ?? []),
+                                                            value,
+                                                        ];
+                                                        try {
+                                                            await pb
+                                                                .collection(
+                                                                    "users",
+                                                                )
+                                                                .update(
+                                                                    pb.authStore
+                                                                        .record
+                                                                        ?.id!,
+                                                                    {
+                                                                        groups,
+                                                                    },
+                                                                );
+
+                                                            window.location.reload();
+                                                        } catch {
+                                                            alert(
+                                                                "Deze code werkt niet.",
+                                                            );
+                                                        }
+                                                    }
+                                                }}
+                                                type="text"
+                                                placeholder="XXXXXXX"
+                                                class="w-full bg-transparent text-sm text-white/80
+                                                   placeholder-white/30 focus:outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </details>
                         </div>
                     </div>
+
                     <div>
                         <p class="text-sm opacity-65 mb-1 pl-1">
-                            Aangemaakt op
+                            Account gemaakt op
                         </p>
                         <div
                             class="h-12 w-80 overflow-hidden rounded-2xl bg-white/10 shadow-lg backdrop-blur-md"

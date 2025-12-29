@@ -37,6 +37,14 @@
             }
         }
 
+        if (!sessionStorage.getItem("studyuren:checked")) {
+            sessionStorage.setItem("studyuren:checked", "true");
+            window.location.href = "https://studyuren.bijsven.nl";
+        } else if (!sessionStorage.getItem("tussenuren:checked")) {
+            sessionStorage.setItem("tussenuren:checked", "true");
+            window.location.href = "https://tussenuren.bijsven.nl";
+        }
+
         if (
             !localStorage.getItem("group") ||
             !localStorage.getitem("visited")![0]
