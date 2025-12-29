@@ -10,16 +10,25 @@
     let users = $state() as any;
 
     onMount(async () => {
-        const restoreparam = page.url.searchParams.get("data");
-        if (restoreparam) {
+        const params = new URLSearchParams(window.location.search);
+        const data = params.get("data");
+
+        if (data) {
             try {
-                const dataset = JSON.parse(decodeURIComponent(restoreparam));
+                const dataset = JSON.parse(decodeURIComponent(data));
 
                 for (const [key, value] of Object.entries(dataset)) {
-                    localStorage.setItem(key, JSON.stringify(value));
+                    // Alleen stringify als het geen string is
+                    if (typeof value === "string") {
+                        localStorage.setItem(key, value);
+                    } else {
+                        localStorage.setItem(key, JSON.stringify(value));
+                    }
                 }
-            } catch {
-                console.log("failed to restore data");
+
+                console.log("LocalStorage is hersteld:", dataset);
+            } catch (e) {
+                console.error("Kon data niet parsen", e);
             }
         }
 
