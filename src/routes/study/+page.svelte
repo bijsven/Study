@@ -34,6 +34,7 @@
     let extensionNeedsUpdate = $state(false);
     let showCustomWallpaperChooser = $state(false);
     let showReleaseNotes = $state(false);
+    let progressInLearning = $state(0);
 
     const DB_NAME = "application";
     const DB_VERSION = 3;
@@ -138,41 +139,24 @@
     }
 
     async function saveScore(seconds: number) {
-        if (seconds < 15) {
-            return 0;
-        }
+        if (seconds < 15) return 0;
 
-        const multiplier = Math.floor(Math.random() * 1) + 1;
-        let score = seconds * multiplier;
+        let multiplier = 1 + 0.1 * (seconds / 60);
+        multiplier = Math.min(multiplier, 3);
 
-        multiplier_used = multiplier;
+        let score = Math.floor(seconds * multiplier);
 
-        const data = await pb
-            .collection("studyuren")
-            .getOne(localStorage.getItem("user:id")!, {
-                query: {
-                    groupId: localStorage.getItem("group")!,
-                },
-            });
+        multiplier_used = Number(multiplier.toFixed(2));
 
-        const existing = data.data || [];
-
-        existing.push({
-            duration: seconds,
-            multiplier,
-            score,
-            date: Date.now(),
-        });
-
-        finalScore = score;
+        finalScore = Math.floor(score);
         showOverlay = true;
+        scoreShow += score;
 
-        scoreShow = scoreShow + score;
-
-        pb.collection("studyuren").create({
+        await pb.collection("studyuren").create({
             user: pb.authStore.record!.id,
             duration: seconds,
-            score,
+            score: score,
+            date: new Date().toISOString(),
         });
 
         return score;
@@ -320,6 +304,22 @@
         }, 5000);
 
         mounted = true;
+
+        // progressInLearning setting
+        (async () => {
+            const experienceToday = (
+                await pb
+                    .collection("studyuren_lookup")
+                    .getOne(pb.authStore.record?.id!)
+            ).daily_score;
+
+            const targetExperience = 5400;
+
+            progressInLearning = Math.min(
+                100,
+                Math.round((experienceToday / targetExperience) * 100),
+            );
+        })();
 
         return () => {
             clearSessionInterval();
@@ -529,17 +529,66 @@
             class="absolute top-0 left-0 h-full w-full z-10 flex flex-col items-center justify-center text-white text-8xl"
         >
             <div
-                class="flex absolute cursor-default gap-1 mb-8 items-center justify-center {app.CheckIn
+                class="absolute cursor-default mb-8 flex items-center justify-center
+                    {app.CheckIn
                     ? 'animate-unnoticed-zoomout'
                     : 'animate-unnoticed-reenter'}"
+                style="--progress: {progressInLearning}%"
             >
-                {#if formatTime(app.counter)["m"] < 10}
-                    0
-                {/if}
-                <NumberFlow value={formatTime(app.counter)["m"]} />
-                :{#if formatTime(app.counter)["s"] < 10}0{/if}
-                <NumberFlow value={formatTime(app.counter)["s"]} />
+                <div
+                    class="timer-base flex gap-1 justify-center items-center
+                        {app.running ? 'fade-out' : 'fade-in'}"
+                >
+                    {#if formatTime(app.counter)["m"] < 10}0{/if}
+                    <NumberFlow value={formatTime(app.counter)["m"]} />
+                    :{#if formatTime(app.counter)["s"] < 10}0{/if}
+                    <NumberFlow value={formatTime(app.counter)["s"]} />
+                </div>
+
+                <div
+                    class="timer-fill flex gap-1 items-center
+                        {app.running ? 'full-width fade-in' : 'fade-in'}"
+                >
+                    {#if formatTime(app.counter)["m"] < 10}0{/if}
+                    <NumberFlow value={formatTime(app.counter)["m"]} />
+                    :{#if formatTime(app.counter)["s"] < 10}0{/if}
+                    <NumberFlow value={formatTime(app.counter)["s"]} />
+                </div>
             </div>
+
+            <style>
+                .timer-base {
+                    color: rgba(255, 255, 255, 0.35);
+                    transition: opacity 400ms cubic-bezier(0.22, 1, 0.36, 1); /* smooth ease-out */
+                }
+
+                .timer-fill {
+                    position: absolute;
+                    inset: 0;
+                    overflow: hidden;
+                    white-space: nowrap;
+
+                    width: var(--progress);
+                    color: white;
+                    pointer-events: none;
+
+                    transition:
+                        width 500ms cubic-bezier(0.22, 1, 0.36, 1),
+                        opacity 400ms cubic-bezier(0.22, 1, 0.36, 1);
+                }
+
+                .full-width {
+                    width: 100% !important;
+                }
+
+                .fade-in {
+                    opacity: 1;
+                }
+
+                .fade-out {
+                    opacity: 0;
+                }
+            </style>
 
             {#if showCustomWallpaperChooser}
                 <div
@@ -828,14 +877,13 @@
             </div>
 
             {#if !app.user.id}
-                <a
-                    href="https://tussenuren.bijsven.nl/connect/studyuren"
+                <p
                     class="text-sm absolute top-16 cursor-pointer duration-200 hover:opacity-100 z-10
 				{app.running ? 'opacity-0' : 'opacity-45'}"
                     in:fly={{ duration: 500, y: -5 }}
                 >
-                    Inloggen met Tussenuren
-                </a>
+                    Gebruikersprofiel aan het laden
+                </p>
             {:else if loggedintextvisible}
                 <p
                     class="text-sm absolute top-16 duration-200

@@ -1,7 +1,7 @@
 let ALLOWED_SITES = [];
 let allowedSitesReady = false;
 
-fetch("https://studyuren.bijsven.nl/allowed_sites.json")
+fetch("https://study.bijsven.nl/allowed_sites.json")
     .then(res => res.json())
     .then(data => {
         ALLOWED_SITES = data;
@@ -173,7 +173,7 @@ function blockSiteAndNotify(blockedTabId, blockedUrl) {
     
     chrome.tabs.query({}, (tabs) => {
         const studyTab = tabs.find(t => 
-            t.url && (t.url.includes('studyuren.bijsven.nl') || t.url.includes('localhost'))
+            t.url && (t.url.includes('study.bijsven.nl') || t.url.includes('localhost'))
         );
 
         if (studyTab && studyTab.id) {
@@ -200,7 +200,7 @@ function focusStudyurenTab() {
     
     chrome.tabs.query({}, (tabs) => {
         const studyTab = tabs.find(t => 
-            t.url && (t.url.includes('studyuren.bijsven.nl') || t.url.includes('localhost'))
+            t.url && (t.url.includes('study.bijsven.nl') || t.url.includes('localhost'))
         );
 
         if (studyTab && studyTab.id) {
@@ -218,7 +218,7 @@ setInterval(() => {
 
     chrome.tabs.query({}, (tabs) => {
         const studyTab = tabs.find(t => 
-            t.url && (t.url.includes('studyuren.bijsven.nl') || t.url.includes('localhost'))
+            t.url && (t.url.includes('study.bijsven.nl') || t.url.includes('localhost'))
         );
 
         if (!studyTab) {

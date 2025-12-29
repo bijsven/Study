@@ -1,6 +1,6 @@
 let ALLOWED_SITES = [];
 
-fetch("https://studyuren.bijsven.nl/allowed_sites.json")
+fetch("https://study.bijsven.nl/allowed_sites.json")
     .then(res => res.json())
     .then(data => {
         ALLOWED_SITES = data;
@@ -17,7 +17,7 @@ let checkInState = {
     startedAt: 0,
     remaining: 10
 };
-const isStudyurenPage = window.location.hostname.includes('studyuren.bijsven.nl') || 
+const isStudyurenPage = window.location.hostname.includes('study.bijsven.nl') || 
                         window.location.hostname === 'localhost' ||
                         window.location.hostname === '127.0.0.1';
 
