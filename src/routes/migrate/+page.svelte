@@ -52,9 +52,7 @@
         } else if (!sessionStorage.getItem("tussenuren:checked")) {
             sessionStorage.setItem("tussenuren:checked", "true");
             window.location.href = "https://tussenuren.bijsven.nl";
-        }
-
-        if (
+        } else if (
             !localStorage.getItem("group") ||
             !JSON.parse(localStorage.getItem("visited")!)![0]
         ) {
