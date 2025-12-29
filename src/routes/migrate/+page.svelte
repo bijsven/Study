@@ -12,6 +12,10 @@
     let group = $state();
 
     onMount(async () => {
+        if (pb.authStore.isValid) {
+            goto("/");
+        }
+
         const params = new URLSearchParams(window.location.search);
         const data = params.get("data");
 
