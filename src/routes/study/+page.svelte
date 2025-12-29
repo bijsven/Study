@@ -35,6 +35,10 @@
     let showCustomWallpaperChooser = $state(false);
     let showReleaseNotes = $state(false);
 
+    const DB_NAME = "application";
+    const DB_VERSION = 3;
+    const STORE_NAME = "images";
+
     let blockedAction = $state({
         visible: false,
         url: "",
@@ -78,50 +82,58 @@
         );
     }
 
-    async function saveBackgroundFile(file: File) {
-        return new Promise<void>((resolve, reject) => {
-            const request = indexedDB.open("application", 2);
+    function openDB(): Promise<IDBDatabase> {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-            request.onupgradeneeded = (event) => {
-                const db = (event.target as IDBOpenDBRequest).result;
-                if (!db.objectStoreNames.contains("images")) {
-                    db.createObjectStore("images");
+            request.onupgradeneeded = () => {
+                const db = request.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME);
                 }
             };
 
-            request.onsuccess = (event) => {
-                const db = (event.target as IDBOpenDBRequest).result;
-                const tx = db.transaction("images", "readwrite");
-                const store = tx.objectStore("images");
-                store.put(file, "background");
-
-                tx.oncomplete = () => resolve();
-                tx.onerror = () => reject(tx.error);
-            };
-
+            request.onsuccess = () => resolve(request.result);
             request.onerror = () => reject(request.error);
         });
     }
 
-    async function loadBackgroundFile(): Promise<File | undefined> {
+    export async function saveBackgroundFile(file: File): Promise<void> {
+        const db = await openDB();
+
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open("application", 2);
+            const tx = db.transaction(STORE_NAME, "readwrite");
+            const store = tx.objectStore(STORE_NAME);
 
-            request.onsuccess = (event) => {
-                const db = (event.target as IDBOpenDBRequest).result;
-                if (!db.objectStoreNames.contains("images"))
-                    return resolve(undefined);
+            store.put(file, "background");
 
-                const tx = db.transaction("images", "readonly");
-                const store = tx.objectStore("images");
-                const getRequest = store.get("background");
-
-                getRequest.onsuccess = () =>
-                    resolve(getRequest.result as File | undefined);
-                getRequest.onerror = () => reject(getRequest.error);
+            tx.oncomplete = () => {
+                db.close();
+                resolve();
             };
+            tx.onerror = () => {
+                db.close();
+                reject(tx.error);
+            };
+        });
+    }
 
-            request.onerror = () => reject(request.error);
+    export async function loadBackgroundFile(): Promise<File | undefined> {
+        const db = await openDB();
+
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, "readonly");
+            const store = tx.objectStore(STORE_NAME);
+            const req = store.get("background");
+
+            req.onsuccess = () => {
+                db.close();
+                resolve(req.result as File | undefined);
+            };
+            req.onerror = () => {
+                db.close();
+                reject(req.error);
+            };
         });
     }
 
