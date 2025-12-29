@@ -78,6 +78,53 @@
         );
     }
 
+    async function saveBackgroundFile(file: File) {
+        return new Promise<void>((resolve, reject) => {
+            const request = indexedDB.open("application", 2);
+
+            request.onupgradeneeded = (event) => {
+                const db = (event.target as IDBOpenDBRequest).result;
+                if (!db.objectStoreNames.contains("images")) {
+                    db.createObjectStore("images");
+                }
+            };
+
+            request.onsuccess = (event) => {
+                const db = (event.target as IDBOpenDBRequest).result;
+                const tx = db.transaction("images", "readwrite");
+                const store = tx.objectStore("images");
+                store.put(file, "background");
+
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            };
+
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async function loadBackgroundFile(): Promise<File | undefined> {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open("application", 2);
+
+            request.onsuccess = (event) => {
+                const db = (event.target as IDBOpenDBRequest).result;
+                if (!db.objectStoreNames.contains("images"))
+                    return resolve(undefined);
+
+                const tx = db.transaction("images", "readonly");
+                const store = tx.objectStore("images");
+                const getRequest = store.get("background");
+
+                getRequest.onsuccess = () =>
+                    resolve(getRequest.result as File | undefined);
+                getRequest.onerror = () => reject(getRequest.error);
+            };
+
+            request.onerror = () => reject(request.error);
+        });
+    }
+
     async function saveScore(seconds: number) {
         if (seconds < 15) {
             return 0;
@@ -144,21 +191,10 @@
         if (app.background.endsWith(".webp")) {
             app.background = "/assets/background/" + app.background;
         } else if (app.background === "local") {
-            const request = indexedDB.open("application", 1);
-
-            request.onsuccess = (event) => {
-                const db = (event.target as IDBOpenDBRequest).result;
-                const transaction = db.transaction("images", "readonly");
-                const store = transaction.objectStore("images");
-
-                const getRequest = store.get("background");
-                getRequest.onsuccess = () => {
-                    const file = getRequest.result as File | undefined;
-                    if (file) {
-                        app.background = URL.createObjectURL(file);
-                    }
-                };
-            };
+            (async () => {
+                const file = await loadBackgroundFile();
+                if (file) app.background = URL.createObjectURL(file);
+            })();
         }
 
         const hasFocus = () => {
@@ -514,8 +550,9 @@
                                     Kies een achtergrond
                                 </h2>
                                 <button
-                                    onclick={() =>
-                                        (showCustomWallpaperChooser = false)}
+                                    onclick={() => {
+                                        showCustomWallpaperChooser = false;
+                                    }}
                                     class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20
 										flex items-center justify-center transition-all duration-200
 										hover:scale-105 active:scale-95"
@@ -551,6 +588,7 @@
                                                 i + 1 + ".webp",
                                             );
                                             showCustomWallpaperChooser = false;
+                                            window.location.reload();
                                         }}
                                         class="group relative aspect-video rounded-2xl overflow-hidden
 											ring-2 ring-transparent hover:ring-white/40
@@ -609,77 +647,28 @@
                                         accept="image/*"
                                         class="hidden"
                                         onchange={async (e) => {
-                                            const input =
-                                                e.target as HTMLInputElement;
-                                            const file = input.files?.[0];
+                                            const file = (
+                                                e.target as HTMLInputElement
+                                            ).files?.[0];
                                             if (!file) return;
 
-                                            const request = indexedDB.open(
-                                                "application",
-                                                1,
-                                            );
-
-                                            request.onupgradeneeded = (
-                                                event,
-                                            ) => {
-                                                const db = (
-                                                    event.target as IDBOpenDBRequest
-                                                ).result;
-                                                if (
-                                                    !db.objectStoreNames.contains(
-                                                        "images",
-                                                    )
-                                                ) {
-                                                    db.createObjectStore(
-                                                        "images",
-                                                    );
-                                                }
-                                            };
-
-                                            request.onsuccess = (event) => {
-                                                const db = (
-                                                    event.target as IDBOpenDBRequest
-                                                ).result;
-                                                const transaction =
-                                                    db.transaction(
-                                                        "images",
-                                                        "readwrite",
-                                                    );
-                                                const store =
-                                                    transaction.objectStore(
-                                                        "images",
-                                                    );
-
-                                                store.put(file, "background");
-
-                                                transaction.oncomplete = () => {
-                                                    localStorage.setItem(
-                                                        "background",
-                                                        "local",
-                                                    );
-
-                                                    app.background =
-                                                        URL.createObjectURL(
-                                                            file,
-                                                        );
-
-                                                    showCustomWallpaperChooser = false;
-                                                };
-
-                                                transaction.onerror = (err) => {
-                                                    console.error(
-                                                        "IndexedDBStorageError",
-                                                        err,
-                                                    );
-                                                };
-                                            };
-
-                                            request.onerror = (err) => {
+                                            try {
+                                                await saveBackgroundFile(file);
+                                                localStorage.setItem(
+                                                    "background",
+                                                    "local",
+                                                );
+                                                app.background =
+                                                    URL.createObjectURL(file);
+                                                showCustomWallpaperChooser = false;
+                                            } catch (err) {
                                                 console.error(
-                                                    "IndexedDBStorageError2",
+                                                    "Failed to save background",
                                                     err,
                                                 );
-                                            };
+                                            }
+
+                                            window.location.reload();
                                         }}
                                     />
                                     <span class="text-center">
