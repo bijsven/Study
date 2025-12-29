@@ -1,76 +1,58 @@
 <script lang="ts">
-	import { onMount } from "svelte";
-	import { goto } from "$app/navigation";
-	import { pb } from "$lib";
-	import { fly } from "svelte/transition";
+    import { onMount } from "svelte";
+    import { fly } from "svelte/transition";
+    import { page } from "$app/state";
+    import { pb } from "@/index";
+    import { goto } from "$app/navigation";
 
-	let fase = $state(0);
-	let user = $state<any>();
+    let error = $state("");
 
-	onMount(async () => {
-		const params = new URLSearchParams(window.location.search);
-		const userId = params.get("userid");
-		fase = 1;
-		if (!userId) return;
+    onMount(async () => {
+        const id = page.url.searchParams.get("id");
+        const data = page.url.searchParams.get("data");
 
-		user = await pb.collection("members").getOne(userId);
-		fase = 2;
-		if (!user) return;
+        if (!id || !data) {
+            goto("/");
+            return;
+        }
 
-		let record;
+        try {
+            await pb.collection("users").authWithOTP(id, data);
+        } catch {
+            error = "De code is ongeldig of vervallen. Probeer het opnieuw.";
+        }
 
-		try {
-			record = await pb.collection("studyuren").create(
-				{
-					group: user.group,
-					user: user.id,
-					data: [],
-				},
-				{
-					query: {
-						groupId: user.group,
-					},
-				}
-			);
-		} catch (e) {
-			console.log("User already exists, falling back...");
-
-			record = await pb
-				.collection("studyuren")
-				.getFirstListItem(`user.id = "${user.id}"`, {
-					query: {
-						groupId: user.group,
-					},
-				});
-		}
-		fase = 4;
-
-		localStorage.setItem("user", user.id);
-		localStorage.setItem("user:id", record.id);
-		localStorage.setItem("username", user.username);
-		localStorage.setItem("group", user.group);
-
-		fase = 5;
-
-		goto("/");
-	});
+        if (pb.authStore.isValid) {
+            goto("/account");
+        }
+    });
 </script>
 
-<div class="flex justify-center items-center absolute bg-black h-full w-full">
-	<div>
-		<h1
-			in:fly={{ duration: 500, y: 20 }}
-			out:fly={{ duration: 500, y: -20, delay: 250 }}
-			class="text-3xl font-semibold text-white falt"
-		>
-			Tussenuren
-		</h1>
-		<p
-			in:fly={{ duration: 500, y: 10, delay: 250 }}
-			out:fly={{ duration: 500, y: -10 }}
-			class="falt text-right opacity-65 text-white text-xs"
-		>
-			Connecting w/ Studyuren ({fase} / 5)
-		</p>
-	</div>
+<div class="absolute h-full w-full inset-0 top-0 left-0">
+    <div>
+        <img
+            src="/assets/background/1.webp"
+            alt="background"
+            class="h-full w-full object-cover absolute top-0 left-0"
+            draggable="false"
+        />
+        <div
+            class="backdrop-blur-3xl bg-black/50 inset-0 h-full w-full absolute top-0 left-0"
+        ></div>
+    </div>
+
+    <div
+        class="z-10 top-0 left-0 text-white absolute h-full w-full flex justify-between items-center px-52"
+    >
+        <div class="w-96">
+            <p in:fly={{ duration: 500, y: 5 }} class="text-3xl font-semibold">
+                {error ? "Er ging iets fout" : "Doorsturen"}
+            </p>
+            <p in:fly={{ duration: 500, y: 5 }} class="opacity-65 mt-1">
+                {error
+                    ? error
+                    : "Welkom terug, we zijn op dit moment je aan het aanmelden en alles goed aan het instellen. Dit zou niet langer dan een seconden moeten duren."}
+            </p>
+        </div>
+    </div>
 </div>
