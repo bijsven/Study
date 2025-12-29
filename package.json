@@ -40,5 +40,8 @@
     "@number-flow/svelte": "^0.3.9",
     "lucide-svelte": "^0.556.0",
     "pocketbase": "^0.26.5"
+  },
+  "resolutions": {
+    "estree-walker": "npm:@benpsnyder/estree-walker@3.0.3"
   }
 }
