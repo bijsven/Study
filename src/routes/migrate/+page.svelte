@@ -20,7 +20,7 @@
         const data = params.get("data");
         const service = params.get("service");
 
-        if (service) {
+        if (service && pb.authStore.isValid) {
             if (service === "tussenuren") {
                 goto("/breaks");
             } else if (service === "studyuren") {
