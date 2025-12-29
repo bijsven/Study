@@ -58,7 +58,7 @@
             !localStorage.getItem("group") ||
             !JSON.parse(localStorage.getItem("visited")!)![0]
         ) {
-            goto("/migrate?missing_data");
+            goto("/account");
         }
 
         users = await pb.collection("legacy_members").getFullList({
