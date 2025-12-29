@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { goto } from "$app/navigation";
     import { page } from "$app/state";
     import { pb } from "@/index";
     import { onMount } from "svelte";
@@ -8,6 +9,7 @@
     let progress = $state(0);
     let progress_finalize = $state("Versturen");
     let users = $state() as any;
+    let group = $state();
 
     onMount(async () => {
         const params = new URLSearchParams(window.location.search);
@@ -18,7 +20,6 @@
                 const dataset = JSON.parse(decodeURIComponent(data));
 
                 for (const [key, value] of Object.entries(dataset)) {
-                    // Alleen stringify als het geen string is
                     if (typeof value === "string") {
                         localStorage.setItem(key, value);
                     } else {
@@ -32,13 +33,23 @@
             }
         }
 
+        if (
+            !localStorage.getItem("group") ||
+            !localStorage.getitem("visited")![0]
+        ) {
+            alert(
+                "Je was niet ingelogd. Redirecting naar normale inlogpaneel.",
+            );
+            goto("/account");
+        }
+
         users = await pb.collection("legacy_members").getFullList({
             query: {
-                groupId: localStorage.getItem("group")!,
+                groupId:
+                    localStorage.getItem("group")! ||
+                    localStorage.getItem("visited")![0],
             },
         });
-
-        console.log(users);
     });
 
     async function finalize() {
