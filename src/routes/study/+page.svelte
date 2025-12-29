@@ -313,7 +313,7 @@
                     .getOne(pb.authStore.record?.id!)
             ).daily_score;
 
-            const targetExperience = 5400;
+            const targetExperience = 7200;
 
             progressInLearning = Math.min(
                 100,
