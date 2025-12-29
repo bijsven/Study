@@ -47,16 +47,16 @@
 
         if (
             !localStorage.getItem("group") ||
-            !localStorage.getItem("visited")![0]
+            !JSON.parse(localStorage.getItem("visited")!)![0]
         ) {
-            goto("/account");
+            goto("/migrate?missing_data");
         }
 
         users = await pb.collection("legacy_members").getFullList({
             query: {
                 groupId:
                     localStorage.getItem("group")! ||
-                    localStorage.getItem("visited")![0],
+                    JSON.parse(localStorage.getItem("visited")!)![0],
             },
         });
     });
