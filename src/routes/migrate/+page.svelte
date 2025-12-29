@@ -49,9 +49,6 @@
             !localStorage.getItem("group") ||
             !localStorage.getItem("visited")![0]
         ) {
-            alert(
-                "Je was niet ingelogd. Redirecting naar normale inlogpaneel.",
-            );
             goto("/account");
         }
 
