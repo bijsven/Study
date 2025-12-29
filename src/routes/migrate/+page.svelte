@@ -82,7 +82,9 @@
             data: {
                 somtoday_calendar: user.ical_link,
             },
-            groups: JSON.parse(localStorage.getItem("visited")!),
+            groups:
+                localStorage.getItem("group")! ||
+                JSON.parse(localStorage.getItem("visited")!)![0],
         };
 
         progress_finalize = "Account aanmaken";
