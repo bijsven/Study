@@ -318,7 +318,7 @@
                 await pb
                     .collection("studyuren_lookup")
                     .getOne(pb.authStore.record?.id!)
-            ).daily_score;
+            ).daily_time_done;
 
             const targetExperience = 7200;
 
