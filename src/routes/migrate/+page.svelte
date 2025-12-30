@@ -12,10 +12,6 @@
     let group = $state();
 
     onMount(async () => {
-        if (pb.authStore.isValid) {
-            goto("/");
-        }
-
         const params = new URLSearchParams(window.location.search);
         const data = params.get("data");
         const service = params.get("service");
@@ -23,9 +19,14 @@
         if (service && pb.authStore.isValid) {
             if (service === "tussenuren") {
                 goto("/breaks");
+                return;
             } else if (service === "studyuren") {
                 goto("/study");
+                return;
             }
+        } else if (pb.authStore.isValid) {
+            goto("/");
+            return;
         }
 
         if (data) {
