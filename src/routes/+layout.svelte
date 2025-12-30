@@ -32,7 +32,9 @@
     <a
         onmouseenter={() => {
             isHoveredHome = true;
-            isHoveredHome = false;
+            setTimeout(() => {
+                isHoveredHome = false;
+            }, 500);
         }}
         href={page.url.pathname.includes("/breaks/") ? "/breaks" : "/"}
         class=" absolute duration-200 z-50 bottom-8 lg:flex hidden
