@@ -268,21 +268,21 @@
                     filter: `ping > "${new Date(Date.now() - 10 * 1000).toISOString().replace("T", " ").split(".")[0]}"`,
                 });
 
-                await pb.collection("users_public").subscribe("*", async () => {
+                setInterval(async () => {
                     otherOnline = await pb
                         .collection("users_public")
                         .getFullList({
                             filter: `ping > "${new Date(Date.now() - 10 * 1000).toISOString().replace("T", " ").split(".")[0]}"`,
                         });
-                });
+                }, 5000);
             } catch (e) {
                 console.log("Application crashed with friendNetworkError");
                 console.error(e);
             }
 
-            safeOnlineUsers = (otherOnline ?? [])
-                .map((o: any) => o?.expand?.user?.expand?.user)
-                .filter((u: any) => u && u.id !== app.user.id);
+            safeOnlineUsers = (otherOnline ?? []).filter(
+                (u: any) => u && u.id !== app.user.id,
+            );
         })();
 
         (async () => {
