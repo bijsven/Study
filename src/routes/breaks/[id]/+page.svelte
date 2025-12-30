@@ -445,7 +445,14 @@
         <div class="w-80 p-6 mt-12 overflow-y-auto hidden lg:flex flex-col">
             <div style="flex-shrink: 0;">
                 <div class="flex gap-3 items-center">
-                    <h1 class="text-2xl font-bold">{group.name}</h1>
+                    <a href="/breaks" class="group h-8">
+                        <h1 class="text-2xl font-bold group-hover:hidden">
+                            {group.name}
+                        </h1>
+                        <h1 class="text-lg font-bold group-hover:block hidden">
+                            Selecteer groep
+                        </h1>
+                    </a>
                     <Share
                         class="opacity-45 size-4 cursor-pointer"
                         onclick={() => {

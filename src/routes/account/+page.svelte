@@ -1,6 +1,7 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
     import { pb } from "@/index";
+    import { Trash } from "@jis3r/icons";
     import { Plus } from "lucide-svelte";
     import { onMount } from "svelte";
     import { fly, fade } from "svelte/transition";
@@ -12,7 +13,7 @@
     let email = $state("");
     let ical_data = $state("");
 
-    let groups = $state([]) as string[];
+    let groups = $state([]) as any;
 
     async function login() {
         await pb.collection("users").requestOTP(email);
@@ -30,9 +31,11 @@
                 appstate = 1;
 
                 for (const group of pb.authStore.record!.groups) {
-                    groups.push(
-                        (await pb.collection("groups").getOne(group)).name,
-                    );
+                    groups.push({
+                        id: group,
+                        name: (await pb.collection("groups").getOne(group))
+                            .name,
+                    });
                 }
             }
         });
@@ -190,7 +193,7 @@
                             class="h-12 w-80 overflow-hidden rounded-2xl bg-white/10 shadow-lg backdrop-blur-md"
                         >
                             <input
-                                bind:value={pb.authStore.record!.email}
+                                value={pb.authStore.record!.email}
                                 placeholder="Email"
                                 disabled
                                 class="h-full w-full rounded-2xl bg-transparent px-5 text-white/65 placeholder-white/60 caret-white transition-all duration-300 focus:ring-2 focus:ring-white/40 focus:ring-offset-1 focus:outline-none"
@@ -205,7 +208,7 @@
                             class="h-12 w-80 overflow-hidden rounded-2xl bg-white/10 shadow-lg backdrop-blur-md"
                         >
                             <input
-                                bind:value={pb.authStore.record!.username}
+                                value={pb.authStore.record!.username}
                                 placeholder="Username"
                                 disabled
                                 class="h-full w-full rounded-2xl bg-transparent px-5 text-white/65 placeholder-white/60 caret-white transition-all duration-300 focus:ring-2 focus:ring-white/40 focus:ring-offset-1 focus:outline-none"
@@ -289,11 +292,40 @@
                                         {#each groups as group}
                                             <li
                                                 class="px-5 py-3 text-white/70 transition
-                                                   hover:bg-white/10 hover:text-white flex justify-between items-center
+                                                   hover:bg-white/10 hover:text-white
                                                    "
                                             >
-                                                {group}
-                                                X   
+                                                <div
+                                                    class="flex justify-between items-center"
+                                                >
+                                                    {group.name}
+                                                    <button
+                                                        onclick={async () => {
+                                                            await pb
+                                                                .collection(
+                                                                    "users",
+                                                                )
+                                                                .update(
+                                                                    pb.authStore
+                                                                        .record
+                                                                        ?.id!,
+                                                                    {
+                                                                        groups: pb.authStore.record?.groups.filter(
+                                                                            (
+                                                                                g: any,
+                                                                            ) =>
+                                                                                g !=
+                                                                                group.id,
+                                                                        ),
+                                                                    },
+                                                                );
+                                                            window.location.reload();
+                                                        }}
+                                                        class="opacity-65 cursor-pointer hover:opacity-100"
+                                                    >
+                                                        <Trash size={16} />
+                                                    </button>
+                                                </div>
                                             </li>
                                         {/each}
                                     </ul>
