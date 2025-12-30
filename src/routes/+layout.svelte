@@ -30,8 +30,10 @@
 
 {#if page.url.pathname !== "/"}
     <a
-        onmouseenter={() => (isHoveredHome = true)}
-        onmouseleave={() => (isHoveredHome = false)}
+        onmouseenter={() => {
+            isHoveredHome = true;
+            isHoveredHome = false;
+        }}
         href={page.url.pathname.includes("/breaks/") ? "/breaks" : "/"}
         class=" absolute duration-200 z-50 bottom-8 lg:flex hidden
             left-8 gap-1 hover:scale-101
