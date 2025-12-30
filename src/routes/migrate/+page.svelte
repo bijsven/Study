@@ -188,7 +188,7 @@
             </div>
 
             <div
-                class="flex flex-col gap-3 lg:h-128 overflow-y-auto p-3 min-w-fit"
+                class="flex flex-col gap-3 lg:h-128 overflow-y-auto overflow-x-hidden p-3 min-w-fit"
             >
                 {#each users as user}
                     {#if user.migrated == false}
