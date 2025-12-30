@@ -444,12 +444,6 @@
     >
         <div class="w-80 p-6 mt-12 overflow-y-auto hidden lg:flex flex-col">
             <div style="flex-shrink: 0;">
-                <a
-                    href="/breaks"
-                    class="text-sm opacity-65 flex gap-1 items-center cursor-pointer"
-                >
-                    <ChevronLeft class="size-3" />Back
-                </a>
                 <div class="flex gap-3 items-center">
                     <h1 class="text-2xl font-bold">{group.name}</h1>
                     <Share

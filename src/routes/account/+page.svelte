@@ -148,14 +148,6 @@
                         meer opties.
                     </p>
                     <div class="flex flex-col items-start gap-2 mt-3">
-                        <a
-                            transition:fly={{ duration: 500, y: 5, delay: 150 }}
-                            href="/"
-                            class="text-xs opacity-30 hover:opacity-100 duration-300 cursor-pointer hover:font-semibold"
-                        >
-                            Terug
-                        </a>
-
                         <button
                             onclick={() => {
                                 pb.authStore.clear();
@@ -297,10 +289,11 @@
                                         {#each groups as group}
                                             <li
                                                 class="px-5 py-3 text-white/70 transition
-                                                   hover:bg-white/10 hover:text-white
+                                                   hover:bg-white/10 hover:text-white flex justify-between items-center
                                                    "
                                             >
                                                 {group}
+                                                X   
                                             </li>
                                         {/each}
                                     </ul>

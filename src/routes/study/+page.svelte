@@ -9,6 +9,9 @@
     import ComponentRanking from "./component_ranking.svelte";
 
     import ComponentExtension from "./component_extension.svelte";
+    import Counter from "./component_counter.svelte";
+    import Settings from "./component_settings.svelte";
+    import SessionHistory from "./component_sessionhistory.svelte";
     import { cubicOut } from "svelte/easing";
 
     let image = $state(undefined) as HTMLImageElement | undefined;
@@ -33,6 +36,8 @@
     let showExtensionUseHint = $state(true);
     let extensionNeedsUpdate = $state(false);
     let showCustomWallpaperChooser = $state(false);
+    let showSettings = $state(false);
+    let showSessionHistory = $state(false);
     let showReleaseNotes = $state(false);
     let progressInLearning = $state(0);
 
@@ -164,8 +169,10 @@
 
     onMount(() => {
         window.SetWallpaper = () => {
-            showCustomWallpaperChooser = true;
+            showSettings = true;
         };
+
+        window.saveBackgroundFile = saveBackgroundFile;
 
         let wakeLock: any = null;
 
@@ -985,7 +992,34 @@
             </button>
 
             {#if showLeaderboard}
-                <ComponentRanking callback={() => (showLeaderboard = false)} />
+                <ComponentRanking
+                    callback={() => (showLeaderboard = false)}
+                    onOpenSessionHistory={() => {
+                        showLeaderboard = false;
+                        showSessionHistory = true;
+                    }}
+                />
+            {/if}
+
+            {#if showSettings}
+                <Settings
+                    onClose={() => (showSettings = false)}
+                    currentBackground={localStorage.getItem("background") ||
+                        "8.webp"}
+                    onBackgroundChange={(bg) => {
+                        localStorage.setItem("background", bg);
+                        showSettings = false;
+                        window.location.reload();
+                    }}
+                    counterMode="normal"
+                    onCounterModeChange={(mode) => {
+                        localStorage.setItem("counterMode", mode);
+                    }}
+                />
+            {/if}
+
+            {#if showSessionHistory}
+                <SessionHistory onClose={() => (showSessionHistory = false)} />
             {/if}
 
             {#if showOverlay}

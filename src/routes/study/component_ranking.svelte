@@ -10,7 +10,7 @@
     import { pb } from "$lib";
     import NumberFlow, { continuous } from "@number-flow/svelte";
     import { Confetti } from "svelte-confetti";
-    import { ArrowLeft, Cog, Flame } from "lucide-svelte";
+    import { ArrowLeft, Cog, Flame, Clock, History } from "lucide-svelte";
     import { Lightbulb } from "@jis3r/icons";
 
     interface Player {
@@ -23,7 +23,7 @@
 
     type TimeFrame = "week" | "month" | "all";
 
-    const { callback } = $props();
+    const { callback, onOpenSessionHistory } = $props();
 
     let players = $state<Player[]>([]);
     let loading = $state(true);
@@ -33,6 +33,7 @@
     let activeGroup = $state("default");
     let groupName = $state("Leaderboard");
     let showConfetti = $state(false);
+    let currentUserStreak = $state(0);
 
     onMount(async () => {
         if (activeGroup === "default") {
@@ -51,6 +52,14 @@
 
             allData = data;
             updatePlayersList(activeTab);
+
+            // Get current user's streak
+            const currentUserData = data.find(
+                (d: any) => d.user === pb.authStore.record!.id,
+            );
+            if (currentUserData) {
+                currentUserStreak = currentUserData.streak ?? 0;
+            }
         } catch (error) {
             console.error("Failed to retrieve leaderboard:", error);
         } finally {
@@ -79,7 +88,7 @@
                     id: record.user,
                     name: record.expand?.user?.username || "undefined",
                     xp,
-                    streak: 0,
+                    streak: record.streak ?? 0,
                     visible: false,
                 };
             })
@@ -149,23 +158,52 @@
             {/if}
         {/key}
 
-        <div
-            class="flex flex-col items-center justify-center gap-2 text-white text-2xl"
-        >
+        <div class="flex flex-col items-center gap-4 w-full">
+            <!-- Streak Panel -->
             <p
-                in:fly={{ duration: 650, y: -10, easing: cubicOut, delay: 350 }}
-                out:fly={{ duration: 650, y: -10, easing: cubicOut }}
-                class="text-xs opacity-45 -mb-2"
+                class="absolute bottom-24 text-sm opacity-65 flex gap-1 items-center"
             >
-                Leaderboard
+                <Flame class="size-4 text-orange-400" />{currentUserStreak}
+                dagen
             </p>
-            <h1
-                in:fly={{ duration: 800, y: -10, easing: cubicOut, delay: 500 }}
-                out:fly={{ duration: 800, y: -10, easing: cubicOut }}
-                class="font-semibold"
+            <button
+                onclick={(e) => {
+                    e.stopPropagation();
+                    onOpenSessionHistory?.();
+                }}
+                class="p-2 hover:bg-white/10 absolute bottom-12 right-12 cursor-pointer rounded-lg transition-all flex items-center gap-2 text-white/60 hover:text-white/90"
             >
-                {groupName}
-            </h1>
+                <History class="w-5 h-5" />
+            </button>
+
+            <div
+                class="flex flex-col items-center justify-center gap-2 text-white text-2xl"
+            >
+                <p
+                    in:fly={{
+                        duration: 650,
+                        y: -10,
+                        easing: cubicOut,
+                        delay: 350,
+                    }}
+                    out:fly={{ duration: 650, y: -10, easing: cubicOut }}
+                    class="text-xs opacity-45 -mb-2"
+                >
+                    Leaderboard
+                </p>
+                <h1
+                    in:fly={{
+                        duration: 800,
+                        y: -10,
+                        easing: cubicOut,
+                        delay: 500,
+                    }}
+                    out:fly={{ duration: 800, y: -10, easing: cubicOut }}
+                    class="font-semibold"
+                >
+                    {groupName}
+                </h1>
+            </div>
         </div>
 
         <div
@@ -243,15 +281,10 @@
                     {#each players as player, i}
                         <div
                             in:fly|global={{
-                                duration: 650,
+                                duration: 300,
                                 y: -10,
                                 easing: cubicOut,
                                 delay: i * 100,
-                            }}
-                            out:fly|global={{
-                                duration: 250,
-                                y: -10,
-                                easing: cubicOut,
                             }}
                             class="flex items-center gap-4 px-4 py-3 rounded-xl bg-white/5 backdrop-blur-sm border {player.id ===
                             localStorage.getItem('user:id')
@@ -292,6 +325,14 @@
                                 >
                                     {player.name}
                                 </p>
+                                {#if player.streak > 0}
+                                    <div
+                                        class="flex items-center gap-1 text-orange-400/80 text-xs mt-0.5"
+                                    >
+                                        <Flame class="w-3 h-3" />
+                                        <span>{player.streak} dagen</span>
+                                    </div>
+                                {/if}
                             </div>
 
                             <div
