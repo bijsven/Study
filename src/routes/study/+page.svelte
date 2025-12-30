@@ -24,7 +24,7 @@
     let multiplier_used = $state(1);
     let scoreShow = $state(0);
     let context = $state(undefined) as HTMLDivElement | undefined;
-    let safeOnlineUsers = $state([]) as any;
+    let safeOnlineUsers = $state([]) as { id: string; username: string }[];
 
     let showLeaderboard = $state(false);
     let otherOnline = $state([]) as any;
@@ -506,9 +506,9 @@
     }
 
     $effect(() => {
-        safeOnlineUsers = (otherOnline ?? [])
-            .map((o: any) => o?.expand?.user?.expand?.user)
-            .filter((u: any) => u && u.id !== app.user.id);
+        safeOnlineUsers = (otherOnline ?? []).filter(
+            (u: any) => u && u.id !== app.user.id,
+        );
     });
 </script>
 

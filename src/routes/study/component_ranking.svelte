@@ -86,7 +86,7 @@
 
                 return {
                     id: record.user,
-                    name: record.expand?.user?.username || "undefined",
+                    name: record.expand.user.username || "undefined",
                     xp,
                     streak: record.streak ?? 0,
                     visible: false,
