@@ -32,7 +32,7 @@
     <a
         onmouseenter={() => (isHoveredHome = true)}
         onmouseleave={() => (isHoveredHome = false)}
-        href={page.url.pathname.includes("breaks") ? "/breaks" : "/"}
+        href={page.url.pathname.includes("/breaks/") ? "/breaks" : "/"}
         class=" absolute duration-200 z-50 bottom-8 lg:flex hidden
             left-8 gap-1 hover:scale-101
             hover:font-semibold opacity-45 text-xs hover:opacity-100
