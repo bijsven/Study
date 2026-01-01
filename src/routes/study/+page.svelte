@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { fade, fly } from "svelte/transition";
+    import { cubicOut } from "svelte/easing";
 
     import NumberFlow from "@number-flow/svelte";
     import CheckIn from "./component_checkin.svelte";
@@ -9,10 +10,8 @@
     import ComponentRanking from "./component_ranking.svelte";
 
     import ComponentExtension from "./component_extension.svelte";
-    import Counter from "./component_counter.svelte";
     import Settings from "./component_settings.svelte";
     import SessionHistory from "./component_sessionhistory.svelte";
-    import { cubicOut } from "svelte/easing";
 
     let image = $state(undefined) as HTMLImageElement | undefined;
 
@@ -40,6 +39,27 @@
     let showSessionHistory = $state(false);
     let showReleaseNotes = $state(false);
     let progressInLearning = $state(0);
+
+    // Strictness settings for XP boost calculation
+    let strictnessSettings = $state({
+        browserFocus: true,
+        tabManagement: true,
+        checkInMoments: true,
+    });
+
+    // Function to get current strictness settings (for use in closures)
+    function getStrictnessSettings() {
+        return strictnessSettings;
+    }
+
+    // Calculate XP boost multiplier based on strictness
+    let strictnessMultiplier = $derived(() => {
+        let multiplier = 1.0;
+        if (!strictnessSettings.browserFocus) multiplier -= 0.3;
+        if (!strictnessSettings.tabManagement) multiplier -= 0.3;
+        if (!strictnessSettings.checkInMoments) multiplier -= 0.3;
+        return Math.max(0.1, multiplier);
+    });
 
     const DB_NAME = "application";
     const DB_VERSION = 3;
@@ -146,8 +166,13 @@
     async function saveScore(seconds: number) {
         if (seconds < 15) return 0;
 
+        // Base multiplier from time
         let multiplier = 1 + 0.1 * (seconds / 60);
         multiplier = Math.min(multiplier, 3);
+
+        // Apply strictness multiplier
+        const strictness = strictnessMultiplier();
+        multiplier = multiplier * strictness;
 
         let score = Math.floor(seconds * multiplier);
 
@@ -168,6 +193,25 @@
     }
 
     onMount(() => {
+        // Load strictness settings from localStorage
+        const savedStrictness = localStorage.getItem("strictnessSettings");
+        if (savedStrictness) {
+            try {
+                const parsed = JSON.parse(savedStrictness);
+                strictnessSettings = {
+                    browserFocus: parsed.browserFocus !== false,
+                    tabManagement: parsed.tabManagement !== false,
+                    checkInMoments: parsed.checkInMoments !== false,
+                };
+                console.log(
+                    "[App] Loaded strictness settings:",
+                    strictnessSettings,
+                );
+            } catch (e) {
+                console.error("Failed to load strictness settings:", e);
+            }
+        }
+
         window.SetWallpaper = () => {
             showSettings = true;
         };
@@ -213,7 +257,10 @@
         });
 
         document.addEventListener("fullscreenchange", () => {
+            // If extension is connected, it handles focus management
             if (extensionConnected) return;
+            // If browserFocus is disabled, don't stop on fullscreen exit
+            if (!getStrictnessSettings().browserFocus) return;
 
             if (!document.fullscreenElement) {
                 app.running = false;
@@ -221,7 +268,10 @@
         });
 
         window.addEventListener("blur", () => {
+            // If extension is connected, it handles focus management
             if (extensionConnected) return;
+            // If browserFocus is disabled, don't stop on blur
+            if (!getStrictnessSettings().browserFocus) return;
             app.running = false;
         });
 
@@ -421,8 +471,18 @@
 
         clearCheckInTimeout();
 
+        // Adjust check-in frequency based on strictness settings
+        let minDelay = 5 * 60 * 1000; // 5 minutes
+        let maxDelay = 20 * 60 * 1000; // 20 minutes
+
+        if (!strictnessSettings.checkInMoments) {
+            // Less frequent check-ins for relaxed mode
+            minDelay = 20 * 60 * 1000; // 20 minutes
+            maxDelay = 40 * 60 * 1000; // 40 minutes
+        }
+
         const delay = Math.floor(
-            Math.random() * (20 * 60 * 1000 - 5 * 60 * 1000) + 5 * 60 * 1000,
+            Math.random() * (maxDelay - minDelay) + minDelay,
         );
         checkInTimeout = setTimeout(() => {
             if (!app.running) return;
@@ -466,10 +526,23 @@
         }, 1000);
 
         context?.requestFullscreen?.();
+
+        // Log strictness settings for debugging
+        console.log("[App] Starting session with strictness settings:", {
+            browserFocus: strictnessSettings.browserFocus,
+            tabManagement: strictnessSettings.tabManagement,
+            checkInMoments: strictnessSettings.checkInMoments,
+        });
+
         window.postMessage(
             {
                 type: "studyuren:start-session",
                 startedAt: sessionStartedAt,
+                strictnessSettings: {
+                    browserFocus: strictnessSettings.browserFocus,
+                    tabManagement: strictnessSettings.tabManagement,
+                    checkInMoments: strictnessSettings.checkInMoments,
+                },
             },
             "*",
         );
@@ -1006,14 +1079,37 @@
                     onClose={() => (showSettings = false)}
                     currentBackground={localStorage.getItem("background") ||
                         "8.webp"}
-                    onBackgroundChange={(bg) => {
+                    onBackgroundChange={(bg: any) => {
                         localStorage.setItem("background", bg);
                         showSettings = false;
                         window.location.reload();
                     }}
                     counterMode="normal"
-                    onCounterModeChange={(mode) => {
+                    onCounterModeChange={(mode: "normal" | "pomodoro") => {
                         localStorage.setItem("counterMode", mode);
+                    }}
+                    bind:strictnessSettings
+                    onStrictnessChange={(settings: {
+                        browserFocus: boolean;
+                        tabManagement: boolean;
+                        checkInMoments: boolean;
+                    }) => {
+                        strictnessSettings = settings;
+                        localStorage.setItem(
+                            "strictnessSettings",
+                            JSON.stringify(settings),
+                        );
+
+                        // Update extension with new settings if session is active
+                        if (app.running) {
+                            window.postMessage(
+                                {
+                                    type: "studyuren:update-strictness",
+                                    strictnessSettings: settings,
+                                },
+                                "*",
+                            );
+                        }
                     }}
                 />
             {/if}

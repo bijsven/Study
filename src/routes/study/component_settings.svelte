@@ -1,7 +1,13 @@
 <script lang="ts">
     import { fade, fly } from "svelte/transition";
     import { cubicOut } from "svelte/easing";
-    import { X } from "lucide-svelte";
+    import { X, Info } from "lucide-svelte";
+
+    interface StrictnessSettings {
+        browserFocus: boolean;
+        tabManagement: boolean;
+        checkInMoments: boolean;
+    }
 
     interface SettingsProps {
         onClose: () => void;
@@ -9,6 +15,8 @@
         onBackgroundChange: (background: string) => void;
         counterMode?: "normal" | "pomodoro";
         onCounterModeChange?: (mode: "normal" | "pomodoro") => void;
+        strictnessSettings?: StrictnessSettings;
+        onStrictnessChange?: (settings: StrictnessSettings) => void;
     }
 
     let {
@@ -17,10 +25,54 @@
         onBackgroundChange,
         counterMode = $bindable("normal"),
         onCounterModeChange,
+        strictnessSettings = $bindable({
+            browserFocus: true,
+            tabManagement: true,
+            checkInMoments: true,
+        }),
+        onStrictnessChange,
     }: SettingsProps = $props();
 
     let imagesLoaded = $state<Record<number, boolean>>({});
-    let activeTab = $state<"backgrounds" | "counter" | "general">("general");
+    let activeTab = $state<
+        "backgrounds" | "counter" | "general" | "strictness"
+    >("general");
+
+    // Calculate XP boost multiplier based on strictness settings
+    let xpBoostMultiplier = $derived(() => {
+        let multiplier = 1.0;
+        if (!strictnessSettings.browserFocus) multiplier -= 0.3;
+        if (!strictnessSettings.tabManagement) multiplier -= 0.3;
+        if (!strictnessSettings.checkInMoments) multiplier -= 0.3;
+        return Math.max(0.1, multiplier); // Minimum 0.1x multiplier
+    });
+
+    let previousMultiplier = $state(1.0);
+    let animateMultiplier = $state(false);
+
+    // Watch for multiplier changes and trigger animation
+    $effect(() => {
+        const current = xpBoostMultiplier();
+        if (current !== previousMultiplier) {
+            animateMultiplier = true;
+            setTimeout(() => {
+                animateMultiplier = false;
+                previousMultiplier = current;
+            }, 500);
+        }
+    });
+
+    function handleStrictnessChange(
+        key: keyof StrictnessSettings,
+        value: boolean,
+    ) {
+        const newSettings = { ...strictnessSettings, [key]: value };
+        strictnessSettings = newSettings;
+        onStrictnessChange?.(newSettings);
+
+        // Save to localStorage
+        localStorage.setItem("strictnessSettings", JSON.stringify(newSettings));
+    }
 
     const backgrounds = Array.from({ length: 8 }, (_, i) => ({
         id: i + 1,
@@ -101,6 +153,15 @@
                         : 'text-white/50 hover:text-white/70'}"
                 >
                     Algemeen
+                </button>
+                <button
+                    onclick={() => (activeTab = "strictness")}
+                    class="px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/5 transition-all cursor-pointer {activeTab ===
+                    'strictness'
+                        ? 'bg-white/10 text-white'
+                        : 'text-white/50 hover:text-white/70'}"
+                >
+                    Strictheid
                 </button>
                 <button
                     onclick={() => (activeTab = "backgrounds")}
@@ -293,6 +354,174 @@
                             </div>
                         </div>
                     {/if}
+                </div>
+            {:else if activeTab === "strictness"}
+                <div in:fly={{ y: 5, duration: 300 }} class="space-y-6">
+                    <div class="space-y-3">
+                        <h3 class="text-white/80 text-sm font-medium mb-3">
+                            Monitoring Instellingen
+                        </h3>
+
+                        <label
+                            class="flex items-start gap-4 p-4 rounded-lg border border-white/10 hover:bg-white/5 cursor-pointer transition-all {strictnessSettings.browserFocus
+                                ? 'bg-white/5'
+                                : 'bg-red-500/5 border-red-500/20'}"
+                        >
+                            <div class="flex items-center h-6">
+                                <input
+                                    type="checkbox"
+                                    checked={strictnessSettings.browserFocus}
+                                    onchange={(e) =>
+                                        handleStrictnessChange(
+                                            "browserFocus",
+                                            e.currentTarget.checked,
+                                        )}
+                                    class="w-5 h-5 rounded accent-blue-500 cursor-pointer"
+                                />
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="text-white font-medium text-base"
+                                    >
+                                        Browser Focus Vereist
+                                    </span>
+                                    {#if !strictnessSettings.browserFocus}
+                                        <span
+                                            class="text-xs px-2 py-0.5 bg-red-500/20 text-red-300 rounded-full"
+                                        >
+                                            −0.3x XP
+                                        </span>
+                                    {/if}
+                                </div>
+                                <p class="text-white/60 text-sm mt-1">
+                                    {#if strictnessSettings.browserFocus}
+                                        De browser moet gefocust blijven.
+                                        Switching naar andere apps stopt de
+                                        sessie.
+                                    {:else}
+                                        Je mag vrij tussen apps wisselen.
+                                        Check-ins blijven wel actief voor
+                                        verificatie.
+                                    {/if}
+                                </p>
+                            </div>
+                        </label>
+
+                        <!-- Tab Management Check -->
+                        <label
+                            class="flex items-start gap-4 p-4 rounded-lg border border-white/10 hover:bg-white/5 cursor-pointer transition-all {strictnessSettings.tabManagement
+                                ? 'bg-white/5'
+                                : 'bg-red-500/5 border-red-500/20'}"
+                        >
+                            <div class="flex items-center h-6">
+                                <input
+                                    type="checkbox"
+                                    checked={strictnessSettings.tabManagement}
+                                    onchange={(e) =>
+                                        handleStrictnessChange(
+                                            "tabManagement",
+                                            e.currentTarget.checked,
+                                        )}
+                                    class="w-5 h-5 rounded accent-blue-500 cursor-pointer"
+                                />
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="text-white font-medium text-base"
+                                    >
+                                        Browser Tabs Beheren
+                                    </span>
+                                    {#if !strictnessSettings.tabManagement}
+                                        <span
+                                            class="text-xs px-2 py-0.5 bg-red-500/20 text-red-300 rounded-full"
+                                        >
+                                            −0.3x XP
+                                        </span>
+                                    {/if}
+                                </div>
+                                <p class="text-white/60 text-sm mt-1">
+                                    {#if strictnessSettings.tabManagement}
+                                        Alleen toegestane websites (itslearning,
+                                        SOMtoday, etc.) zijn toegestaan. Andere
+                                        tabs worden gesloten.
+                                    {:else}
+                                        Alle websites zijn toegestaan. Handig
+                                        voor research en opzoekwerk.
+                                    {/if}
+                                </p>
+                            </div>
+                        </label>
+
+                        <!-- Check-in Moments -->
+                        <label
+                            class="flex items-start gap-4 p-4 rounded-lg border border-white/10 hover:bg-white/5 cursor-pointer transition-all {strictnessSettings.checkInMoments
+                                ? 'bg-white/5'
+                                : 'bg-red-500/5 border-red-500/20'}"
+                        >
+                            <div class="flex items-center h-6">
+                                <input
+                                    type="checkbox"
+                                    checked={strictnessSettings.checkInMoments}
+                                    onchange={(e) =>
+                                        handleStrictnessChange(
+                                            "checkInMoments",
+                                            e.currentTarget.checked,
+                                        )}
+                                    class="w-5 h-5 rounded accent-blue-500 cursor-pointer"
+                                />
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="text-white font-medium text-base"
+                                    >
+                                        Regelmatige Check-in Momenten
+                                    </span>
+                                    {#if !strictnessSettings.checkInMoments}
+                                        <span
+                                            class="text-xs px-2 py-0.5 bg-red-500/20 text-red-300 rounded-full"
+                                        >
+                                            −0.3x XP
+                                        </span>
+                                    {/if}
+                                </div>
+                                <p class="text-white/60 text-sm mt-1">
+                                    {#if strictnessSettings.checkInMoments}
+                                        Om de 5-20 minuten moet je met je muis
+                                        bewegen om je aanwezigheid te
+                                        bevestigen.
+                                    {:else}
+                                        Minder frequente check-ins (om de 20-40
+                                        minuten) voor flexibeler werken.
+                                    {/if}
+                                </p>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Extension Info -->
+                    <div
+                        class="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg"
+                    >
+                        <div class="flex gap-3">
+                            <Info
+                                class="w-5 h-5 text-blue-400 shrink-0 mt-0.5"
+                            />
+                            <div class="text-sm text-white/80 space-y-2">
+                                <p class="font-medium text-blue-200">
+                                    Chrome Extension Support
+                                </p>
+                                <p class="text-white/70 leading-relaxed">
+                                    Met de <strong>Studyuren Companion</strong>
+                                    extension worden check-ins getoond op alle tabs
+                                    en wordt tab-beheer geactiveerd. Zonder extension
+                                    werken check-ins alleen op dit tab.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             {:else if activeTab === "general"}
                 <div in:fly={{ y: 5, duration: 300 }} class="space-y-4">
