@@ -1,4 +1,4 @@
-import { pb } from "$lib/pocketbase";
+import { pb } from "$lib/index";
 
 export type Member = { id: string; username: string; ical_link: string };
 export type Event = { start: Date; end: Date; summary?: string };

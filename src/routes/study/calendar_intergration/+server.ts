@@ -1,5 +1,6 @@
 import { pb } from "@/index";
 import type { RequestHandler } from "./$types";
+import { error } from "@sveltejs/kit";
 
 function formatDate(date: Date) {
   return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
@@ -7,13 +8,16 @@ function formatDate(date: Date) {
 
 export const GET: RequestHandler = async ({ url }) => {
   const apptoken = url.searchParams.get("apptoken");
+
+  if (!apptoken) throw error(400, "Missing apptoken");
+
   const now = new Date();
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
   const records = await pb.collection("studyuren").getFullList({
     filter: `date >= "${weekAgo.toISOString()}"`,
     query: {
-      apptoken,
+      apptoken: apptoken,
     },
   });
 

@@ -1,6 +1,6 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
-    import { pb } from "$lib/pocketbase";
+    import { pb } from "$lib/index";
     import { ChevronRight } from "lucide-svelte";
     import { onMount } from "svelte";
     import { fade, fly } from "svelte/transition";
