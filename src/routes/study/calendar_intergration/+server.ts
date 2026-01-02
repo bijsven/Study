@@ -1,4 +1,3 @@
-import { pb } from "@/index";
 import type { RequestHandler } from "./$types";
 import { error } from "@sveltejs/kit";
 
@@ -8,22 +7,28 @@ function formatDate(date: Date) {
 
 export const GET: RequestHandler = async ({ url }) => {
   const apptoken = url.searchParams.get("apptoken");
-
   if (!apptoken) throw error(400, "Missing apptoken");
 
   const now = new Date();
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  const records = await pb.collection("studyuren").getFullList({
-    filter: `date >= "${weekAgo.toISOString()}"`,
-    query: {
-      apptoken: apptoken,
-    },
-  });
+  const pbUrl = new URL(
+    "https://tussenuur-api.bijsven.nl/api/collections/studyuren/records",
+  );
+  pbUrl.searchParams.set("filter", `date >= "${weekAgo.toISOString()}"`);
+  pbUrl.searchParams.set("perPage", "500");
+  pbUrl.searchParams.set("page", "1");
+  pbUrl.searchParams.set("apptoken", apptoken);
+
+  const res = await fetch(pbUrl.toString());
+  if (!res.ok) throw error(res.status, "Failed to fetch from PocketBase");
+
+  const data = await res.json();
+  const records = data.items;
 
   let ical = `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//Studyuren Calendar Intergration//EN
+PRODID:-//Studyuren Calendar Integration//EN
 CALSCALE:GREGORIAN
 `;
 
