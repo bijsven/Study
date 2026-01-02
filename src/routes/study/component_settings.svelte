@@ -548,9 +548,11 @@
                                     .getFirstListItem(
                                         `user.id='${pb.authStore.record?.id}'`,
                                     )
-                                    .catch();
+                                    .catch(() => {
+                                        // do nothing, because this error is intended (no, this comment is NOT ai.)
+                                    });
 
-                                if (record.id)
+                                if (record?.id)
                                     token = await pb
                                         .collection("intergration")
                                         .delete(record.id);
