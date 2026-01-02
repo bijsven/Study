@@ -2,6 +2,7 @@
     import { fade, fly } from "svelte/transition";
     import { cubicOut } from "svelte/easing";
     import { X, Info } from "lucide-svelte";
+    import { pb } from "@/index";
 
     interface StrictnessSettings {
         browserFocus: boolean;
@@ -525,13 +526,53 @@
                 </div>
             {:else if activeTab === "general"}
                 <div in:fly={{ y: 5, duration: 300 }} class="space-y-4">
-                    <div class="p-4 bg-white/5 rounded-lg">
-                        <h3 class="text-white/80 text-sm font-medium mb-2">
-                            Algemene instellingen
-                        </h3>
-                        <p class="text-white/50 text-sm">
-                            Meer opties komen binnenkort beschikbaar...
-                        </p>
+                    <div
+                        class="p-4 bg-white/5 flex justify-between items-center rounded-lg"
+                    >
+                        <div>
+                            <h3 class="text-white/80 text-sm font-medium mb-2">
+                                Calendar intergratie
+                            </h3>
+                            <p class="text-white/50 text-sm">
+                                Verbind je agenda met Studyuren om je
+                                gestudeerde uren in te kunnen zien in je agenda.
+                            </p>
+                        </div>
+
+                        <button
+                            onclick={async (e) => {
+                                let token;
+
+                                const record = await pb
+                                    .collection("intergration")
+                                    .getFirstListItem(
+                                        `user.id='${pb.authStore.record?.id}'`,
+                                    );
+
+                                if (record.id)
+                                    token = await pb
+                                        .collection("intergration")
+                                        .delete(record.id);
+
+                                token = await pb
+                                    .collection("intergration")
+                                    .create({
+                                        user: pb.authStore.record?.id,
+                                    });
+
+                                const calendar_url =
+                                    window.location.origin +
+                                    "/study/calendar_intergration?apptoken=" +
+                                    token.id;
+
+                                navigator.clipboard.writeText(calendar_url);
+
+                                alert("Agenda URL is gekopieërd!");
+                            }}
+                            class="p-2 rounded-lg hover:bg-white/10 transition-all text-sm text-nowrap px-3 cursor-pointer active:scale-99"
+                        >
+                            Genereer agenda-url
+                        </button>
                     </div>
                 </div>
             {/if}

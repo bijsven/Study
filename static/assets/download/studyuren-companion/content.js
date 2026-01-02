@@ -235,8 +235,6 @@ window.addEventListener("message", (event) => {
 });
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  console.log("[Content] Received extension message:", msg.type, msg);
-
   switch (msg.type) {
     case "studyuren:session:start":
       handleSessionStart();
