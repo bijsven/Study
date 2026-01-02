@@ -21,14 +21,6 @@ export const GET: RequestHandler = async ({ url }) => {
   pbUrl.searchParams.set("apptoken", apptoken);
 
   const res = await fetch(pbUrl.toString());
-  if (!res.ok) {
-    console.log("Fetching:", pbUrl.toString());
-    console.log("Headers:", [...res.headers]);
-    const text = await res.text();
-    console.log("Response body:", text);
-    throw error(res.status, "Failed to fetch from PocketBase");
-  }
-
   const data = await res.json();
   const records = data.items;
 
