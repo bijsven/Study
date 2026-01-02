@@ -547,7 +547,8 @@
                                     .collection("intergration")
                                     .getFirstListItem(
                                         `user.id='${pb.authStore.record?.id}'`,
-                                    );
+                                    )
+                                    .catch();
 
                                 if (record.id)
                                     token = await pb
