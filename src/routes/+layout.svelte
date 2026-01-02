@@ -12,7 +12,9 @@
 
     let { children } = $props();
 
-    onMount(() => {
+    onMount(async () => {
+        await pb.collection("users").authRefresh();
+
         if (
             !pb.authStore.isValid &&
             !window.location.pathname.includes("migrate") &&
