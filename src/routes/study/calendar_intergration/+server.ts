@@ -24,33 +24,40 @@ export const GET: RequestHandler = async ({ url }) => {
   const data = await res.json();
   const records = data.items;
 
-  let ical = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Studyuren Calendar Integration//EN
-CALSCALE:GREGORIAN
-`;
+  const lines: string[] = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Studyuren Calendar Integration//EN",
+    "CALSCALE:GREGORIAN",
+  ];
 
   for (const s of records) {
     const end = new Date(s.date);
     const start = new Date(end.getTime() - s.duration * 1000);
 
-    ical += `BEGIN:VEVENT
-UID:${s.id}
-DTSTAMP:${formatDate(now)}
-DTSTART:${formatDate(start)}
-DTEND:${formatDate(end)}
-SUMMARY:Studeren
-DESCRIPTION:${s.duration} sec, score: ${s.score}\nToegevoegd door Studyuren.
-END:VEVENT
-`;
+    lines.push("BEGIN:VEVENT");
+    lines.push(`UID:${s.id}`);
+    lines.push(`DTSTAMP:${formatDate(now)}`);
+    lines.push(`DTSTART:${formatDate(start)}`);
+    lines.push(`DTEND:${formatDate(end)}`);
+    lines.push(`SUMMARY:Studeren`);
+    // BELANGRIJK: Gebruik \\n voor een zichtbare nieuwe regel in de beschrijving
+    lines.push(
+      `DESCRIPTION:${s.duration} sec, score: ${s.score}\\nToegevoegd door Studyuren.`,
+    );
+    lines.push("END:VEVENT");
   }
 
-  ical += "END:VCALENDAR";
+  lines.push("END:VCALENDAR");
 
-  return new Response(ical, {
+  // Join alle regels met de verplichte \r\n (CRLF)
+  const icalBody = lines.join("\r\n") + "\r\n";
+
+  return new Response(icalBody, {
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",
-      "Cache-Control": "no-cache",
+      "Content-Disposition": 'attachment; filename="calendar.ics"',
+      "Cache-Control": "no-cache, no-store, must-revalidate",
     },
   });
 };
