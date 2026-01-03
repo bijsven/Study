@@ -1,18 +1,85 @@
 <script lang="ts">
     import NumberFlow from "@number-flow/svelte";
-    import { fade, fly } from "svelte/transition";
 
     interface CounterProps {
         counter: number;
+        running: boolean;
+        checkIn: boolean;
+        progressInLearning: number;
         mode?: "normal" | "pomodoro";
-        isRunning?: boolean;
+        strictnessSettings?: {
+            browserFocus: boolean;
+            tabManagement: boolean;
+            checkInMoments: boolean;
+        };
+        onPhaseComplete?: (phase: "work" | "shortBreak" | "longBreak") => void;
     }
 
     let {
         counter = $bindable(0),
+        running = false,
+        checkIn = false,
+        progressInLearning = 0,
         mode = "normal",
-        isRunning = false,
+        strictnessSettings = {
+            browserFocus: true,
+            tabManagement: true,
+            checkInMoments: true,
+        },
+        onPhaseComplete,
     }: CounterProps = $props();
+
+    const POMODORO_WORK = 25 * 60;
+    const POMODORO_SHORT_BREAK = 5 * 60;
+    const POMODORO_LONG_BREAK = 15 * 60;
+
+    let pomodoroPhase = $state<"work" | "shortBreak" | "longBreak">("work");
+    let pomodoroSession = $state(1);
+    let phaseStartCounter = $state(0);
+
+    $effect(() => {
+        if (mode === "pomodoro" && running) {
+            const phaseDuration =
+                pomodoroPhase === "work"
+                    ? POMODORO_WORK
+                    : pomodoroPhase === "shortBreak"
+                      ? POMODORO_SHORT_BREAK
+                      : POMODORO_LONG_BREAK;
+
+            const elapsed = counter - phaseStartCounter;
+
+            if (elapsed >= phaseDuration) {
+                const completedPhase = pomodoroPhase;
+                phaseStartCounter = counter;
+
+                if (pomodoroPhase === "work") {
+                    if (pomodoroSession % 4 === 0) {
+                        pomodoroPhase = "longBreak";
+                    } else {
+                        pomodoroPhase = "shortBreak";
+                    }
+                } else {
+                    pomodoroPhase = "work";
+                    pomodoroSession += 1;
+                    onPhaseComplete?.(completedPhase);
+                }
+            }
+        }
+    });
+
+    let displayTime = $derived(() => {
+        if (mode === "pomodoro") {
+            const maxTime =
+                pomodoroPhase === "work"
+                    ? POMODORO_WORK
+                    : pomodoroPhase === "shortBreak"
+                      ? POMODORO_SHORT_BREAK
+                      : POMODORO_LONG_BREAK;
+            const elapsed = counter - phaseStartCounter;
+            return Math.max(0, maxTime - elapsed);
+        }
+        return counter;
+    });
 
     const formatTime = (time: number) => {
         const h = Math.floor(time / 3600);
@@ -21,223 +88,104 @@
         return { h, m, s };
     };
 
-    const pomodoroSettings = {
-        workDuration: 25 * 60, // 25 minutes
-        breakDuration: 5 * 60, // 5 minutes
-        longBreakDuration: 15 * 60, // 15 minutes
-        sessionsUntilLongBreak: 4,
-    };
-
-    let pomodoroState = $state({
-        currentSession: 0,
-        isBreak: false,
-        phase: "work" as "work" | "break" | "longBreak",
+    let xpMultiplier = $derived(() => {
+        let multiplier = 1.0;
+        if (!strictnessSettings.browserFocus) multiplier -= 0.1;
+        if (!strictnessSettings.tabManagement) multiplier -= 0.1;
+        if (!strictnessSettings.checkInMoments) multiplier -= 0.1;
+        return Math.max(0.1, multiplier);
     });
 
-    // Calculate Pomodoro progress
-    $effect(() => {
-        if (mode === "pomodoro" && isRunning) {
-            const currentDuration =
-                pomodoroState.phase === "work"
-                    ? pomodoroSettings.workDuration
-                    : pomodoroState.phase === "break"
-                      ? pomodoroSettings.breakDuration
-                      : pomodoroSettings.longBreakDuration;
-
-            if (counter >= currentDuration) {
-                // Switch phases
-                if (pomodoroState.phase === "work") {
-                    pomodoroState.currentSession++;
-                    if (
-                        pomodoroState.currentSession %
-                            pomodoroSettings.sessionsUntilLongBreak ===
-                        0
-                    ) {
-                        pomodoroState.phase = "longBreak";
-                    } else {
-                        pomodoroState.phase = "break";
-                    }
-                } else {
-                    pomodoroState.phase = "work";
-                }
-            }
+    let calculatedXP = $derived(() => {
+        if (mode === "pomodoro" && pomodoroPhase !== "work") {
+            return 0;
         }
+        return Math.floor(counter * xpMultiplier());
     });
 
-    const getDisplayTime = (time: number) => {
+    let pomodoroProgress = $derived(() => {
         if (mode === "pomodoro") {
-            const currentDuration =
-                pomodoroState.phase === "work"
-                    ? pomodoroSettings.workDuration
-                    : pomodoroState.phase === "break"
-                      ? pomodoroSettings.breakDuration
-                      : pomodoroSettings.longBreakDuration;
-
-            return formatTime(Math.max(0, currentDuration - time));
+            const phaseDuration =
+                pomodoroPhase === "work"
+                    ? POMODORO_WORK
+                    : pomodoroPhase === "shortBreak"
+                      ? POMODORO_SHORT_BREAK
+                      : POMODORO_LONG_BREAK;
+            const elapsed = counter - phaseStartCounter;
+            return Math.min(100, (elapsed / phaseDuration) * 100);
         }
-        return formatTime(time);
-    };
-
-    const getPhaseLabel = () => {
-        if (mode !== "pomodoro") return "";
-
-        switch (pomodoroState.phase) {
-            case "work":
-                return "Focus Time";
-            case "break":
-                return "Short Break";
-            case "longBreak":
-                return "Long Break";
-        }
-    };
-
-    const getProgressPercentage = () => {
-        if (mode !== "pomodoro") return (counter / 3600) * 100; // 1 hour max for normal mode
-
-        const currentDuration =
-            pomodoroState.phase === "work"
-                ? pomodoroSettings.workDuration
-                : pomodoroState.phase === "break"
-                  ? pomodoroSettings.breakDuration
-                  : pomodoroSettings.longBreakDuration;
-
-        return Math.min(100, (counter / currentDuration) * 100);
-    };
+        return progressInLearning;
+    });
 </script>
 
-<div class="relative flex flex-col items-center gap-4">
+<div
+    class="absolute cursor-default mb-8 flex flex-col items-center justify-center
+        {checkIn ? 'animate-unnoticed-zoomout' : 'animate-unnoticed-reenter'}"
+    style="--progress: {progressInLearning}%"
+>
     {#if mode === "pomodoro"}
         <div
-            class="text-white/60 text-sm font-medium tracking-wide uppercase"
-            in:fade={{ duration: 300 }}
+            class="text-sm uppercase -mb-3 font-medium tracking-wider text-white/50"
         >
-            {getPhaseLabel()}
-        </div>
-        <div class="flex items-center gap-2 text-white/40 text-xs">
-            <span>Session {pomodoroState.currentSession + 1}</span>
-            <span>•</span>
-            <span
-                >{pomodoroSettings.sessionsUntilLongBreak -
-                    (pomodoroState.currentSession %
-                        pomodoroSettings.sessionsUntilLongBreak)} until long break</span
-            >
+            {#if pomodoroPhase === "work"}
+                Studeren
+            {:else}
+                Pauze
+            {/if}
         </div>
     {/if}
 
     <div
-        class="timer-display flex items-center justify-center gap-3 text-white"
+        class="timer-base flex gap-1 justify-center items-center
+            {running ? 'fade-out' : 'fade-in'}"
     >
-        {#if getDisplayTime(counter).h > 0}
-            <div class="timer-segment">
-                {#if getDisplayTime(counter).h < 10}
-                    <span class="timer-zero">0</span>
-                {/if}
-                <NumberFlow
-                    value={getDisplayTime(counter).h}
-                    class="timer-value"
-                />
-                <span class="timer-label">h</span>
-            </div>
-            <span class="timer-separator">:</span>
-        {/if}
-
-        <div class="timer-segment">
-            {#if getDisplayTime(counter).m < 10}
-                <span class="timer-zero">0</span>
-            {/if}
-            <NumberFlow value={getDisplayTime(counter).m} class="timer-value" />
-            <span class="timer-label">m</span>
-        </div>
-
-        <span class="timer-separator">:</span>
-
-        <div class="timer-segment">
-            {#if getDisplayTime(counter).s < 10}
-                <span class="timer-zero">0</span>
-            {/if}
-            <NumberFlow value={getDisplayTime(counter).s} class="timer-value" />
-            <span class="timer-label">s</span>
-        </div>
+        {#if formatTime(displayTime())["m"] < 10}0{/if}
+        <NumberFlow value={formatTime(displayTime())["m"]} />
+        :{#if formatTime(displayTime())["s"] < 10}0{/if}
+        <NumberFlow value={formatTime(displayTime())["s"]} />
     </div>
 
-    {#if mode === "pomodoro"}
-        <div
-            class="w-full max-w-xs h-2 bg-white/10 rounded-full overflow-hidden"
-        >
-            <div
-                class="h-full transition-all duration-1000 ease-linear {pomodoroState.phase ===
-                'work'
-                    ? 'bg-blue-500'
-                    : 'bg-green-500'}"
-                style="width: {getProgressPercentage()}%"
-            ></div>
-        </div>
-    {/if}
+    <div
+        class="timer-fill flex gap-1 items-center
+            {running ? 'full-width fade-in' : 'fade-in'}"
+    >
+        {#if formatTime(displayTime())["m"] < 10}0{/if}
+        <NumberFlow value={formatTime(displayTime())["m"]} />
+        :{#if formatTime(displayTime())["s"] < 10}0{/if}
+        <NumberFlow value={formatTime(displayTime())["s"]} />
+    </div>
 </div>
 
 <style>
-    .timer-display {
-        font-size: 6rem;
-        font-weight: 700;
-        line-height: 1;
-        text-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+    .timer-base {
+        color: rgba(255, 255, 255, 0.35);
+        transition: opacity 400ms cubic-bezier(0.22, 1, 0.36, 1);
     }
 
-    .timer-segment {
-        display: inline-flex;
-        align-items: baseline;
-        gap: 0.25rem;
-        position: relative;
+    .timer-fill {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        white-space: nowrap;
+
+        width: var(--progress);
+        color: white;
+        pointer-events: none;
+
+        transition:
+            width 500ms cubic-bezier(0.22, 1, 0.36, 1),
+            opacity 400ms cubic-bezier(0.22, 1, 0.36, 1);
     }
 
-    :global(.timer-value) {
-        font-variant-numeric: tabular-nums;
+    .full-width {
+        width: 100% !important;
     }
 
-    .timer-zero {
-        opacity: 0.5;
+    .fade-in {
+        opacity: 1;
     }
 
-    .timer-label {
-        font-size: 2rem;
-        opacity: 0.4;
-        margin-left: 0.25rem;
-    }
-
-    .timer-separator {
-        opacity: 0.6;
-        animation: blink 2s ease-in-out infinite;
-    }
-
-    @keyframes blink {
-        0%,
-        49%,
-        100% {
-            opacity: 0.6;
-        }
-        50%,
-        99% {
-            opacity: 0.2;
-        }
-    }
-
-    @media (max-width: 768px) {
-        .timer-display {
-            font-size: 4rem;
-        }
-
-        .timer-label {
-            font-size: 1.5rem;
-        }
-    }
-
-    @media (max-width: 480px) {
-        .timer-display {
-            font-size: 3rem;
-        }
-
-        .timer-label {
-            font-size: 1rem;
-        }
+    .fade-out {
+        opacity: 0;
     }
 </style>

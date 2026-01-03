@@ -12,6 +12,7 @@
     import ComponentExtension from "./component_extension.svelte";
     import Settings from "./component_settings.svelte";
     import SessionHistory from "./component_sessionhistory.svelte";
+    import Counter from "./component_counter.svelte";
 
     let image = $state(undefined) as HTMLImageElement | undefined;
 
@@ -39,6 +40,7 @@
     let showSessionHistory = $state(false);
     let showReleaseNotes = $state(false);
     let progressInLearning = $state(0);
+    let counterMode = $state<"normal" | "pomodoro">("normal");
 
     // Strictness settings for XP boost calculation
     let strictnessSettings = $state({
@@ -52,14 +54,13 @@
         return strictnessSettings;
     }
 
-    // Calculate XP boost multiplier based on strictness
-    let strictnessMultiplier = $derived(() => {
+    function strictnessMultiplier() {
         let multiplier = 1.0;
         if (!strictnessSettings.browserFocus) multiplier -= 0.3;
         if (!strictnessSettings.tabManagement) multiplier -= 0.3;
         if (!strictnessSettings.checkInMoments) multiplier -= 0.3;
         return Math.max(0.1, multiplier);
-    });
+    }
 
     const DB_NAME = "application";
     const DB_VERSION = 3;
@@ -90,14 +91,6 @@
     });
     let checkInInterval: ReturnType<typeof setInterval> | undefined;
     let checkInTimeout: ReturnType<typeof setTimeout> | undefined;
-
-    const formatTime = (time: number) => {
-        const h = Math.floor(time / 3600);
-        const m = Math.floor((time % 3600) / 60);
-        const s = Math.floor(time % 60);
-
-        return { h, m, s };
-    };
 
     function syncTimerWithStart() {
         if (!sessionStartedAt) return;
@@ -360,6 +353,11 @@
             extensiontextvisible = false;
         }, 5000);
 
+        const savedCounterMode = localStorage.getItem("counterMode");
+        if (savedCounterMode === "pomodoro" || savedCounterMode === "normal") {
+            counterMode = savedCounterMode;
+        }
+
         mounted = true;
 
         // progressInLearning setting
@@ -608,67 +606,19 @@
         <div
             class="absolute top-0 left-0 h-full w-full z-10 flex flex-col items-center justify-center text-white text-8xl"
         >
-            <div
-                class="absolute cursor-default mb-8 flex items-center justify-center
-                    {app.CheckIn
-                    ? 'animate-unnoticed-zoomout'
-                    : 'animate-unnoticed-reenter'}"
-                style="--progress: {progressInLearning}%"
-            >
-                <div
-                    class="timer-base flex gap-1 justify-center items-center
-                        {app.running ? 'fade-out' : 'fade-in'}"
-                >
-                    {#if formatTime(app.counter)["m"] < 10}0{/if}
-                    <NumberFlow value={formatTime(app.counter)["m"]} />
-                    :{#if formatTime(app.counter)["s"] < 10}0{/if}
-                    <NumberFlow value={formatTime(app.counter)["s"]} />
-                </div>
-
-                <div
-                    class="timer-fill flex gap-1 items-center
-                        {app.running ? 'full-width fade-in' : 'fade-in'}"
-                >
-                    {#if formatTime(app.counter)["m"] < 10}0{/if}
-                    <NumberFlow value={formatTime(app.counter)["m"]} />
-                    :{#if formatTime(app.counter)["s"] < 10}0{/if}
-                    <NumberFlow value={formatTime(app.counter)["s"]} />
-                </div>
-            </div>
-
-            <style>
-                .timer-base {
-                    color: rgba(255, 255, 255, 0.35);
-                    transition: opacity 400ms cubic-bezier(0.22, 1, 0.36, 1); /* smooth ease-out */
-                }
-
-                .timer-fill {
-                    position: absolute;
-                    inset: 0;
-                    overflow: hidden;
-                    white-space: nowrap;
-
-                    width: var(--progress);
-                    color: white;
-                    pointer-events: none;
-
-                    transition:
-                        width 500ms cubic-bezier(0.22, 1, 0.36, 1),
-                        opacity 400ms cubic-bezier(0.22, 1, 0.36, 1);
-                }
-
-                .full-width {
-                    width: 100% !important;
-                }
-
-                .fade-in {
-                    opacity: 1;
-                }
-
-                .fade-out {
-                    opacity: 0;
-                }
-            </style>
+            <Counter
+                bind:counter={app.counter}
+                running={app.running}
+                checkIn={app.CheckIn}
+                {progressInLearning}
+                mode={counterMode}
+                {strictnessSettings}
+                onPhaseComplete={(phase) => {
+                    if (phase === "shortBreak" || phase === "longBreak") {
+                        triggerCheckIn();
+                    }
+                }}
+            />
 
             {#if showCustomWallpaperChooser}
                 <div
@@ -1084,8 +1034,9 @@
                         showSettings = false;
                         window.location.reload();
                     }}
-                    counterMode="normal"
+                    {counterMode}
                     onCounterModeChange={(mode: "normal" | "pomodoro") => {
+                        counterMode = mode;
                         localStorage.setItem("counterMode", mode);
                     }}
                     bind:strictnessSettings

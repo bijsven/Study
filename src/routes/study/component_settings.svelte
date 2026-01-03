@@ -307,7 +307,7 @@
                                 </div>
                             </label>
 
-                            <!-- <label
+                            <label
                                 class="flex items-center gap-3 p-4 rounded-lg border border-white/10 hover:bg-white/5 cursor-pointer transition-all {counterMode ===
                                 'pomodoro'
                                     ? 'bg-white/10 border-blue-500'
@@ -332,7 +332,7 @@
                                         25 min focus, 5 min pauze
                                     </div>
                                 </div>
-                            </label> -->
+                            </label>
                         </div>
                     </div>
 
