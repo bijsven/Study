@@ -125,7 +125,7 @@
 >
     {#if mode === "pomodoro"}
         <div
-            class="text-sm uppercase -mb-3 font-medium tracking-wider text-white/50"
+            class="text-sm uppercase -mb-5 font-medium tracking-wider text-white/50"
         >
             {#if pomodoroPhase === "work"}
                 Studeren
