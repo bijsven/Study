@@ -29,6 +29,8 @@ export const GET: RequestHandler = async ({ url }) => {
     "VERSION:2.0",
     "PRODID:-//Studyuren Calendar Integration//EN",
     "CALSCALE:GREGORIAN",
+    "REFRESH-INTERVAL;VALUE=DURATION:PT15M",
+    "X-PUBLISHED-TTL:PT15M",
   ];
 
   for (const s of records) {
@@ -58,6 +60,8 @@ export const GET: RequestHandler = async ({ url }) => {
       "Content-Type": "text/calendar; charset=utf-8",
       "Content-Disposition": 'attachment; filename="calendar.ics"',
       "Cache-Control": "no-cache, no-store, must-revalidate",
+      Pragma: "no-cache",
+      Expires: "0",
     },
   });
 };
