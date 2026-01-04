@@ -33,9 +33,6 @@
     const POMODORO_SHORT_BREAK = 5 * 60;
     const POMODORO_LONG_BREAK = 15 * 60;
 
-    const phaseChangeSound = new Audio("/assets/pomodoro.mp3");
-    phaseChangeSound.volume = 0.6;
-
     let pomodoroPhase = $state<"work" | "shortBreak" | "longBreak">("work");
     let pomodoroSession = $state(1);
     let phaseStartCounter = $state(0);
@@ -54,8 +51,11 @@
             if (elapsed >= phaseDuration) {
                 const completedPhase = pomodoroPhase;
 
-                phaseChangeSound.currentTime = 0;
-                phaseChangeSound.play().catch(() => {});
+                const phaseChangeSound = new Audio("/assets/pomodoro.mp3");
+                phaseChangeSound.volume = 0.6;
+                phaseChangeSound.play().catch((error) => {
+                    console.error("Failed to play phase change sound:", error);
+                });
 
                 phaseStartCounter = counter;
 
