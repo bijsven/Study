@@ -1,7 +1,7 @@
 <script lang="ts">
     import favicon from "$lib/assets/favicon.png";
     import { pb } from "@/index";
-    import { onMount } from "svelte";
+    import { onMount, onDestroy } from "svelte";
 
     import "./layout.css";
     import { goto } from "$app/navigation";
@@ -11,6 +11,9 @@
     let isHoveredHome = $state(false);
 
     let { children } = $props();
+
+    let pingInterval: ReturnType<typeof setInterval> | null = null;
+    let onlineUsersInterval: ReturnType<typeof setInterval> | null = null;
 
     onMount(async () => {
         await pb.collection("users").authRefresh();
@@ -22,6 +25,41 @@
             !window.location.pathname.includes("account")
         ) {
             goto("/account");
+        }
+
+        if (pb.authStore.isValid && pb.authStore.record) {
+            try {
+                await pb.collection("users").update(pb.authStore.record.id, {
+                    ping: new Date().toISOString(),
+                });
+
+                pingInterval = setInterval(async () => {
+                    if (pb.authStore.isValid && pb.authStore.record) {
+                        try {
+                            await pb
+                                .collection("users")
+                                .update(pb.authStore.record.id, {
+                                    ping: new Date().toISOString(),
+                                });
+                        } catch (e) {
+                            console.error("Ping update failed:", e);
+                        }
+                    }
+                }, 5000);
+            } catch (e) {
+                console.error("Initial ping failed:", e);
+            }
+        }
+    });
+
+    onDestroy(() => {
+        if (pingInterval) {
+            clearInterval(pingInterval);
+            pingInterval = null;
+        }
+        if (onlineUsersInterval) {
+            clearInterval(onlineUsersInterval);
+            onlineUsersInterval = null;
         }
     });
 </script>

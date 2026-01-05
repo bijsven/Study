@@ -295,18 +295,6 @@
 
         (async () => {
             try {
-                await pb.collection("users").update(pb.authStore.record!.id, {
-                    ping: new Date().toISOString(),
-                });
-
-                setInterval(async () => {
-                    await pb
-                        .collection("users")
-                        .update(pb.authStore.record!.id, {
-                            ping: new Date().toISOString(),
-                        });
-                }, 5000);
-
                 otherOnline = await pb.collection("users_public").getFullList({
                     filter: `ping > "${new Date(Date.now() - 10 * 1000).toISOString().replace("T", " ").split(".")[0]}"`,
                 });
