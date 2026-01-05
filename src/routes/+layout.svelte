@@ -3,6 +3,7 @@
     import { pb } from "@/index";
     import { onMount, onDestroy } from "svelte";
     import { injectAnalytics } from "@vercel/analytics/sveltekit";
+    import { injectSpeedInsights } from "@vercel/speed-insights/sveltekit";
 
     import "./layout.css";
     import { goto } from "$app/navigation";
@@ -18,6 +19,8 @@
 
     onMount(async () => {
         await pb.collection("users").authRefresh();
+        injectAnalytics();
+        injectSpeedInsights();
 
         if (
             !pb.authStore.isValid &&
