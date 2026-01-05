@@ -17,7 +17,7 @@
 </script>
 
 <svelte:head>
-    <title>Study (een app bijsven)</title>
+    <title>Study</title>
 </svelte:head>
 
 <div class="absolute h-full w-full inset-0 top-0 left-0 bg-black">
