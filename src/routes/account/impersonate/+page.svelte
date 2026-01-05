@@ -12,4 +12,4 @@
     }
 </script>
 
-<input type="text" onkeydown={handleKeydown} placeholder="Impersonate" />
+<input type="text" onkeydown={handleKeydown} placeholder="Enter key" />
