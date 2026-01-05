@@ -18,7 +18,12 @@
     let onlineUsersInterval: ReturnType<typeof setInterval> | null = null;
 
     onMount(async () => {
-        await pb.collection("users").authRefresh();
+        try {
+            await pb.collection("users").authRefresh();
+        } catch {
+            goto("/account");
+        }
+
         injectAnalytics();
         injectSpeedInsights();
 
