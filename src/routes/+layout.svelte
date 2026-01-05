@@ -2,6 +2,7 @@
     import favicon from "$lib/assets/favicon.png";
     import { pb } from "@/index";
     import { onMount, onDestroy } from "svelte";
+    import { injectAnalytics } from "@vercel/analytics/sveltekit";
 
     import "./layout.css";
     import { goto } from "$app/navigation";
