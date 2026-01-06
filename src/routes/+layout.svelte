@@ -24,8 +24,8 @@
             } catch {
                 if (!pb.authStore.isValid) {
                     pb.authStore.clear();
+                    goto("/account");
                 }
-                goto("/account");
             }
         }
 

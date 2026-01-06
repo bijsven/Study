@@ -43,7 +43,7 @@
 <div class="absolute h-full w-full inset-0 top-0 left-0 bg-black">
     <div>
         <img
-            src="/assets/background/3.webp"
+            src="/assets/background/thumbnails/3.webp"
             alt="background"
             class="h-full w-full object-cover absolute top-0 left-0"
             draggable="false"

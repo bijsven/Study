@@ -11,6 +11,7 @@
 
     let email_state = $state(0);
     let email = $state("");
+    let username = $state("");
     let ical_data = $state("");
 
     let groups = $state([]) as any;
@@ -28,6 +29,7 @@
         setTimeout(async () => {
             if (pb.authStore.isValid) {
                 try {
+                    username = pb.authStore.record!.username;
                     ical_data = pb.authStore.record!.data.somtoday_calendar;
                 } catch {}
                 appstate = 1;
@@ -53,7 +55,7 @@
 >
     <div>
         <img
-            src="/assets/background/3.webp"
+            src="/assets/background/thumbnails/3.webp"
             alt="background"
             class="h-full w-full object-cover absolute top-0 left-0"
             draggable="false"
@@ -210,10 +212,29 @@
                             class="h-12 w-80 overflow-hidden rounded-2xl bg-white/10 shadow-lg backdrop-blur-md"
                         >
                             <input
-                                value={pb.authStore.record!.username}
+                                bind:value={username}
                                 placeholder="Username"
-                                disabled
-                                class="h-full w-full rounded-2xl bg-transparent px-5 text-white/65 placeholder-white/60 caret-white transition-all duration-300 focus:ring-2 focus:ring-white/40 focus:ring-offset-1 focus:outline-none"
+                                oninput={(() => {
+                                    let timeout: ReturnType<
+                                        typeof setTimeout
+                                    > | null = null;
+
+                                    return () => {
+                                        if (timeout) clearTimeout(timeout);
+
+                                        timeout = setTimeout(() => {
+                                            if (username.length > 0) {
+                                                pb.collection("users").update(
+                                                    pb.authStore.record!.id,
+                                                    {
+                                                        username,
+                                                    },
+                                                );
+                                            }
+                                        }, 300);
+                                    };
+                                })()}
+                                class="h-full w-full rounded-2xl bg-transparent px-5 text-white placeholder-white/60 caret-white transition-all duration-300 focus:ring-2 focus:ring-white/40 focus:ring-offset-1 focus:outline-none"
                             />
                         </div>
                     </div>

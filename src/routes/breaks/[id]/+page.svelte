@@ -445,31 +445,9 @@
         <div class="w-80 p-6 mt-12 overflow-y-auto hidden lg:flex flex-col">
             <div style="flex-shrink: 0;">
                 <div class="flex gap-3 items-center">
-                    <a href="/breaks" class="group h-8">
-                        <h1 class="text-2xl font-bold group-hover:hidden">
-                            {group.name}
-                        </h1>
-                        <h1 class="text-lg font-bold group-hover:block hidden">
-                            Selecteer groep
-                        </h1>
-                    </a>
-                    <Share
-                        class="opacity-45 size-4 cursor-pointer"
-                        onclick={() => {
-                            navigator.clipboard.writeText(
-                                window.location.pathname.split("/")[1],
-                            );
-                            alert(
-                                "De groepscode is opgeslagen in je clipboard. Deel deze code met iemand en geef aan dat ze naar tussenuren.bijsven.nl moeten om het in te vullen.",
-                            );
-                        }}
-                    />
-                    <Calendar
-                        class="opacity-45 size-4 cursor-pointer"
-                        onclick={() => {
-                            checkAndScrollToNextDay();
-                        }}
-                    />
+                    <h1 class="text-2xl font-bold">
+                        {group.name}
+                    </h1>
                 </div>
                 <p class="text-xs text-gray-500 mt-1">
                     {group.members.length}
