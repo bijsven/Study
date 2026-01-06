@@ -18,7 +18,7 @@
     let onlineUsersInterval: ReturnType<typeof setInterval> | null = null;
 
     onMount(async () => {
-        if (page.url.pathname == "/callback") {
+        if (!(page.url.pathname == "/callback")) {
             try {
                 await pb.collection("users").authRefresh();
             } catch {
