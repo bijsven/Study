@@ -18,11 +18,13 @@
     let onlineUsersInterval: ReturnType<typeof setInterval> | null = null;
 
     onMount(async () => {
-        try {
-            await pb.collection("users").authRefresh();
-        } catch {
-            pb.authStore.clear();
-            goto("/account");
+        if (page.url.pathname == "/callback") {
+            try {
+                await pb.collection("users").authRefresh();
+            } catch {
+                pb.authStore.clear();
+                goto("/account");
+            }
         }
 
         injectAnalytics();
