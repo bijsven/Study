@@ -22,7 +22,9 @@
             try {
                 await pb.collection("users").authRefresh();
             } catch {
-                pb.authStore.clear();
+                if (!pb.authStore.isValid) {
+                    pb.authStore.clear();
+                }
                 goto("/account");
             }
         }
