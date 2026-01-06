@@ -21,6 +21,7 @@
         try {
             await pb.collection("users").authRefresh();
         } catch {
+            pb.authStore.clear();
             goto("/account");
         }
 
