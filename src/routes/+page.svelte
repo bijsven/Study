@@ -23,7 +23,9 @@
 <div class="absolute h-full w-full inset-0 top-0 left-0 bg-black">
     <div>
         <img
-            src="/assets/background/thumbnails/5.webp"
+            src="/assets/background/thumbnails/{Math.floor(
+                Math.random() * (7 - 0 + 1) + 0,
+            )}.webp"
             alt="background"
             class="h-full w-full object-cover absolute top-0 left-0"
             draggable="false"
@@ -46,10 +48,11 @@
                     Hey {pb.authStore.record!.username}!
                 </p>
                 <p
-                    class="opacity-80 mt-1"
+                    class="text-white/80 mt-1"
                     transition:fly={{ duration: 300, y: 5, delay: 50 }}
                 >
-                    Selecteer een van de onderstaande services om door te gaan.
+                    Je bent lid van {pb.authStore.record?.groups.length ?? 0} groepen,
+                    je kan hieronder een service selecteren.
                 </p>
                 <div class="flex gap-8 mt-4">
                     <button
