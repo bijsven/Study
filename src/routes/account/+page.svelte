@@ -27,7 +27,9 @@
 
         setTimeout(async () => {
             if (pb.authStore.isValid) {
-                ical_data = pb.authStore.record!.data.somtoday_calendar;
+                try {
+                    ical_data = pb.authStore.record!.data.somtoday_calendar;
+                } catch {}
                 appstate = 1;
 
                 for (const group of pb.authStore.record!.groups) {

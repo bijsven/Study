@@ -156,11 +156,15 @@ export async function getGeneralInfo(
   const userMap = new Map<string, Member>();
 
   users.forEach((m: any) => {
-    userMap.set(m.username, {
-      id: m.id,
-      username: m.username,
-      ical_link: m.data.somtoday_calendar,
-    });
+    try {
+      userMap.set(m.username, {
+        id: m.id,
+        username: m.username,
+        ical_link: m.data.somtoday_calendar,
+      });
+    } catch {
+      console.warn(`${m.username}'s ical link is probably not set.`);
+    }
   });
 
   oldMembers.forEach((m: any) => {
