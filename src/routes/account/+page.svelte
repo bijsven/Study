@@ -131,9 +131,19 @@
                                 ? 'cursor-pointer hover:opacity-100'
                                 : 'cursor-not-allowed'}"
                         >
-                            {email_state == 1
-                                ? "Email verzonden - check je email"
-                                : "Email verzenden"}
+                            {#if email_state == 1}
+                                Email verzonden, check je inbox.
+                                {#if email.endsWith("veluwscollege.nl")}
+                                    <p class="opacity-40 text-sm w-82">
+                                        E-mails naar @veluwscollege.nl kunnen
+                                        vertraagd zijn of ontbreken. Check je
+                                        spam. Alleen de meest recente e-mail is
+                                        geldig.
+                                    </p>
+                                {/if}
+                            {:else}
+                                Email verzenden
+                            {/if}
                         </button>
                     {/key}
                 </div>
