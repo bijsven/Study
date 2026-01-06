@@ -139,17 +139,18 @@ export async function getGeneralInfo(
   id: string,
 ): Promise<{ members: Member[]; group: any }> {
   const groupPromise = pb.collection("groups").getOne(id);
-  const membersPromise = pb.collection("legacy_members").getFullList({
-    query: { groupId: id },
-  });
-  const usersPromise = pb.collection("users").getFullList({
+  const usersPromise = pb.collection("users_public").getFullList({
     filter: `groups.id ?= '${id}'`,
   });
 
-  const [group, members, users] = await Promise.all([
+  const old_members = pb.collection("legacy_members").getFullList({
+    query: { groupId: id },
+  });
+
+  const [group, users, oldMembers] = await Promise.all([
     groupPromise,
-    membersPromise,
     usersPromise,
+    old_members,
   ]);
 
   const userMap = new Map<string, Member>();
@@ -162,7 +163,7 @@ export async function getGeneralInfo(
     });
   });
 
-  members.forEach((m: any) => {
+  oldMembers.forEach((m: any) => {
     if (!userMap.has(m.username)) {
       userMap.set(m.username, {
         id: m.id,
