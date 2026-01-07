@@ -57,7 +57,7 @@
             !localStorage.getItem("group") ||
             !JSON.parse(localStorage.getItem("visited")!)[0]
         ) {
-            goto("/account");
+            goto("/account?novaliddata_found");
         }
 
         users = await pb.collection("legacy_members").getFullList({
