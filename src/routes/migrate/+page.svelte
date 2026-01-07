@@ -53,11 +53,6 @@
         } else if (!sessionStorage.getItem("tussenuren:checked")) {
             sessionStorage.setItem("tussenuren:checked", "true");
             window.location.href = "https://tussenuren.bijsven.nl";
-        } else if (
-            !localStorage.getItem("group") ||
-            !JSON.parse(localStorage.getItem("visited")!)[0]
-        ) {
-            goto("/account?novaliddata_found");
         }
 
         users = await pb.collection("legacy_members").getFullList({
