@@ -22,10 +22,8 @@
             try {
                 await pb.collection("users").authRefresh();
             } catch {
-                if (!pb.authStore.isValid) {
-                    pb.authStore.clear();
-                    goto("/account");
-                }
+                goto("/account");
+                return;
             }
         }
 
@@ -39,6 +37,7 @@
             !window.location.pathname.includes("account")
         ) {
             goto("/account");
+            return;
         }
 
         if (pb.authStore.isValid && pb.authStore.record) {
