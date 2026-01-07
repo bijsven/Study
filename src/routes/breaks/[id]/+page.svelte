@@ -60,10 +60,40 @@
     }
 
     function getFilteredMembers() {
-        if (!searchQuery.trim()) return group.members;
-        return group.members.filter((m) =>
-            m.username.toLowerCase().includes(searchQuery.toLowerCase()),
-        );
+        let filtered = searchQuery.trim()
+            ? group.members.filter((m) =>
+                  m.username.toLowerCase().includes(searchQuery.toLowerCase()),
+              )
+            : [...group.members];
+
+        // Sort by weekly hours (most to least)
+        return [...filtered].sort((a, b) => {
+            const hoursA = calculateWeeklyHours(a.id);
+            const hoursB = calculateWeeklyHours(b.id);
+            return hoursB - hoursA;
+        });
+    }
+
+    function calculateWeeklyHours(memberId: string): number {
+        const events = memberSchedules[memberId] || [];
+        const now = new Date();
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        weekStart.setHours(0, 0, 0, 0);
+
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 7);
+
+        let totalMinutes = 0;
+        events.forEach((event) => {
+            if (event.start >= weekStart && event.start < weekEnd) {
+                const duration =
+                    (event.end.getTime() - event.start.getTime()) / (1000 * 60);
+                totalMinutes += duration;
+            }
+        });
+
+        return Math.round((totalMinutes / 60) * 10) / 10;
     }
 
     function scrollToCurrentTime(attempt = 0) {
@@ -488,7 +518,12 @@
                                     : "bg-gray-50 text-gray-700 border border-transparent hover:bg-gray-100"
                             }`}
                         >
-                            <div class="font-medium">{member.username}</div>
+                            <div class="flex justify-between items-center">
+                                <div class="font-medium">{member.username}</div>
+                                <div class="text-[10px] opacity-70">
+                                    {calculateWeeklyHours(member.id)}h/week
+                                </div>
+                            </div>
                         </button>
                     {/each}
                 </div>
