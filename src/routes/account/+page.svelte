@@ -13,12 +13,21 @@
     let email = $state("");
     let username = $state("");
     let ical_data = $state("");
+    let user_reactive_savestate = $state(false);
 
     let groups = $state([]) as any;
 
     async function login() {
         await pb.collection("users").requestOTP(email);
         email_state = 1;
+    }
+
+    function showActionDone() {
+        user_reactive_savestate = true;
+
+        setTimeout(() => {
+            user_reactive_savestate = false;
+        }, 3000);
     }
 
     onMount(() => {
@@ -197,6 +206,15 @@
                     </div>
                 </div>
 
+                {#if user_reactive_savestate}
+                    <p
+                        class="absolute top-12 left-[50%] translate-x-[-50%] text-white text-sm opacity-80"
+                        transition:fly={{ y: -10 }}
+                    >
+                        Opgeslagen!
+                    </p>
+                {/if}
+
                 <div
                     transition:fade
                     class="flex flex-col gap-3 lg:h-128 justify-center items-center overflow-y-auto p-3 min-w-fit"
@@ -240,6 +258,8 @@
                                                         username,
                                                     },
                                                 );
+
+                                                showActionDone();
                                             }
                                         }, 300);
                                     };
@@ -277,6 +297,8 @@
                                                         },
                                                     },
                                                 );
+
+                                                showActionDone();
                                             }
                                         }, 300);
                                     };
