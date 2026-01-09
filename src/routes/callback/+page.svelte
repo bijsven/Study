@@ -23,7 +23,7 @@
         }
 
         if (pb.authStore.isValid) {
-            goto("/account");
+            goto("/");
         }
     });
 </script>
