@@ -93,9 +93,10 @@
             }, 500);
         }}
         href={page.url.pathname.includes("/breaks/") ? "/breaks" : "/"}
-        class=" absolute duration-200 z-50 bottom-8 lg:flex hidden
-            left-8 gap-1 hover:scale-101
-            hover:font-semibold opacity-45 text-xs hover:opacity-100
+        class=" absolute duration-200 z-50 bottom-8 flex lg:left-8 left-[50%] lg:translate-x-0 translate-x-[-50%]
+            gap-1 hover:scale-101
+            lg:hover:font-semibold lg:opacity-45 text-xs lg:hover:opacity-100
+            px-3 py-2 rounded-lg bg-black/80 text-white backdrop-blur-xl
             cursor-pointers justify-center items-center
             {page.url.pathname.includes('breaks') ? 'text-black' : 'text-white'}
             "
