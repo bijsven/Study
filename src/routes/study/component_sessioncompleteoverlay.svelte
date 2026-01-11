@@ -34,7 +34,7 @@
 	>
 		<p class="text-sm w-72 text-white/65">
 			Je hebt in totaal {Math.floor(amount / multiplier)} seconden gestudeerd, en je hebt
-een multiplier van ${multiplier.toFixed(2)} gekregen.
+een multiplier van {multiplier.toFixed(2)}% gekregen.
 		</p>
 		<span class="text-white/30 text-sm text-nowrap mt-3">
 			XP wordt berekent door de tijd en een multiplier.
