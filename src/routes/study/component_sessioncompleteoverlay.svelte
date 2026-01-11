@@ -33,8 +33,8 @@
 		class="absolute bottom-24 flex justify-center items-center flex-col text-center -mt-2"
 	>
 		<p class="text-sm w-72 text-white/65">
-			Je hebt in totaal {amount / multiplier} seconden gestudeerd, en je hebt
-			een multiplier van {multiplier} gekregen.
+			Je hebt in totaal {Math.floor(amount / multiplier)} seconden gestudeerd, en je hebt
+			een multiplier van {Math.floor(multiplier)} gekregen.
 		</p>
 		<span class="text-white/30 text-sm text-nowrap mt-3">
 			XP wordt berekent door de tijd en een multiplier.
