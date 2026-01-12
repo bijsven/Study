@@ -106,4 +106,12 @@
     </a>
 {/if}
 
-{@render children()}
+{#if pb.authStore.record?.ban}
+    <img
+        src="/assets/blocked.png"
+        class="absolute object-cover h-full w-full inset-0 top-0 left-0"
+        alt="blocked"
+    />
+{:else}
+    {@render children()}
+{/if}
