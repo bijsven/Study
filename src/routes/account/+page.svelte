@@ -18,12 +18,8 @@
     let groups = $state([]) as any;
 
     async function login() {
-        try {
-            await pb.collection("users").requestOTP(email.toLowerCase());
-            email_state = 1;
-        } catch {
-            goto("/account/new");
-        }
+        await pb.collection("users").requestOTP(email.toLowerCase());
+        email_state = 1;
     }
 
     function showActionDone() {
