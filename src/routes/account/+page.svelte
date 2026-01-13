@@ -18,7 +18,7 @@
     let groups = $state([]) as any;
 
     async function login() {
-        await pb.collection("users").requestOTP(email);
+        await pb.collection("users").requestOTP(email.toLowerCase());
         email_state = 1;
     }
 

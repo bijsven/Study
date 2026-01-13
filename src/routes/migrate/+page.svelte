@@ -84,7 +84,7 @@
         let newUser = {
             password: "shallnotbeused",
             passwordConfirm: "shallnotbeused",
-            email: User.email,
+            email: User.email.toLowerCase(),
             username: User.username,
             data: {
                 somtoday_calendar: user.ical_link,
@@ -141,7 +141,7 @@
 
         progress_finalize = "Email verzenden";
 
-        await pb.collection("users").requestOTP(User.email);
+        await pb.collection("users").requestOTP(User.email.toLowerCase());
 
         setTimeout(() => {
             progress_finalize = "Klaar!";

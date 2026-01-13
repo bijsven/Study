@@ -18,7 +18,7 @@
                 somtoday_calendar: "",
             },
         });
-        await pb.collection("users").requestOTP(email);
+        await pb.collection("users").requestOTP(email.toLowerCase());
         email_state = 1;
     }
 
