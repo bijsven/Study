@@ -28,6 +28,11 @@
                 goto("/account");
                 return;
             }
+
+            if (!pb.authStore.isValid) {
+                goto("/account");
+                return;
+            }
         }
 
         injectAnalytics();
