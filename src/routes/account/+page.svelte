@@ -18,6 +18,9 @@
     let groups = $state([]) as any;
 
     async function login() {
+        localStorage.clear();
+        sessionStorage.clear();
+        pb.authStore.clear();
         await pb.collection("users").requestOTP(email.toLowerCase());
         email_state = 1;
     }
