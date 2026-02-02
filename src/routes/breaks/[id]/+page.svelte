@@ -462,7 +462,7 @@
 {:else}
     <div
         in:fade={{ delay: 500 }}
-        class="flex gap-0 h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 overflow-hidden transition-colors duration-300"
+        class="flex gap-0 h-screen w-full bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 overflow-hidden transition-colors duration-300"
     >
         <div class="w-80 p-6 mt-12 overflow-y-auto hidden lg:flex flex-col">
             <div style="flex-shrink: 0;">
