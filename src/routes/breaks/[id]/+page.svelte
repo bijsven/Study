@@ -1,9 +1,7 @@
 <script lang="ts">
     import { onMount, tick } from "svelte";
-    import { Calendar, ChevronLeft, Share } from "lucide-svelte";
-
+    import { fly, fade } from "svelte/transition";
     import * as engine from "./engine";
-    import { fade, fly } from "svelte/transition";
 
     let data = $props();
     let mounted = $state(false);
@@ -24,11 +22,12 @@
 
     let syncScrollId: number | null = null;
     let resizeObserverId: number | null = null;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    // --- Data Processing & Logic ---
 
     function onMainScroll() {
-        if (syncScrollId !== null) {
-            cancelAnimationFrame(syncScrollId);
-        }
+        if (syncScrollId !== null) cancelAnimationFrame(syncScrollId);
         syncScrollId = requestAnimationFrame(() => {
             if (scrollContainer && sidebarContainer) {
                 sidebarContainer.scrollTop = scrollContainer.scrollTop;
@@ -38,9 +37,7 @@
     }
 
     function observeMainContainer() {
-        if (resizeObserverId !== null) {
-            cancelAnimationFrame(resizeObserverId);
-        }
+        if (resizeObserverId !== null) cancelAnimationFrame(resizeObserverId);
         resizeObserverId = requestAnimationFrame(() => {
             if (scrollContainer && sidebarContainer) {
                 sidebarContainer.scrollTop = scrollContainer.scrollTop;
@@ -51,11 +48,8 @@
 
     function toggleMember(memberId: string) {
         const newSet = new Set(selectedMembers);
-        if (newSet.has(memberId)) {
-            newSet.delete(memberId);
-        } else {
-            newSet.add(memberId);
-        }
+        if (newSet.has(memberId)) newSet.delete(memberId);
+        else newSet.add(memberId);
         selectedMembers = newSet;
     }
 
@@ -66,7 +60,6 @@
               )
             : [...group.members];
 
-        // Sort by weekly hours (most to least)
         return [...filtered].sort((a, b) => {
             const hoursA = calculateWeeklyHours(a.id);
             const hoursB = calculateWeeklyHours(b.id);
@@ -168,15 +161,29 @@
                 }
             }
         }
-
         scrollToCurrentTime();
     }
 
-    let intervalId: ReturnType<typeof setInterval> | null = null;
+    // --- Lifecycle ---
 
     onMount(() => {
         const id = data.params.id;
         localStorage.setItem("breaks:last", id);
+
+        // --- DARK MODE LOGIC (Zonder Tailwind Config aanpassing) ---
+        // We kijken naar de systeemvoorkeur en zetten de class 'dark' op documentElement
+        const darkModeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+        const applyTheme = (e: MediaQueryList | MediaQueryListEvent) => {
+            if (e.matches) {
+                document.documentElement.classList.add("dark");
+            } else {
+                document.documentElement.classList.remove("dark");
+            }
+        };
+        // Initial check en listener
+        applyTheme(darkModeQuery);
+        darkModeQuery.addEventListener("change", applyTheme);
+        // ---------------------------------------------------------
 
         const loadData = async () => {
             const { group: groupInfo, members } =
@@ -222,6 +229,7 @@
                     cancelAnimationFrame(resizeObserverId);
                 scrollContainer?.removeEventListener("scroll", onMainScroll);
                 resizeObserver.disconnect();
+                darkModeQuery.removeEventListener("change", applyTheme);
             };
         }
 
@@ -234,8 +242,11 @@
             if (syncScrollId !== null) cancelAnimationFrame(syncScrollId);
             if (resizeObserverId !== null)
                 cancelAnimationFrame(resizeObserverId);
+            darkModeQuery.removeEventListener("change", applyTheme);
         };
     });
+
+    // --- Formatters ---
 
     function formatTime(date: Date) {
         return new Date(date).toLocaleTimeString("nl-NL", {
@@ -248,7 +259,6 @@
         const today = new Date();
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
-
         const d = new Date(date);
 
         if (d.toDateString() === today.toDateString()) return "Vandaag";
@@ -265,7 +275,6 @@
         const minutes = Math.round((end.getTime() - start.getTime()) / 60000);
         const hours = Math.floor(minutes / 60);
         const mins = minutes % 60;
-
         if (hours === 0) return `${mins}m`;
         if (mins === 0) return `${hours}u`;
         return `${hours}u ${mins}m`;
@@ -284,13 +293,10 @@
         const dayEvents = events.filter(
             (ev) => ev.start.toDateString() === day,
         );
-
         if (dayEvents.length === 0) return null;
-
         const sortedByStart = [...dayEvents].sort(
             (a, b) => a.start.getTime() - b.start.getTime(),
         );
-
         return sortedByStart[0].start;
     }
 
@@ -302,15 +308,14 @@
         const dayEvents = events.filter(
             (ev) => ev.start.toDateString() === day,
         );
-
         if (dayEvents.length === 0) return null;
-
         const sortedByEnd = [...dayEvents].sort(
             (a, b) => b.end.getTime() - a.end.getTime(),
         );
-
         return sortedByEnd[0].end;
     }
+
+    // --- Timeline Construction Logic ---
 
     let sortedDays = $state() as string[];
     let schedulesByDay = $state({} as Record<string, engine.FreeBlock[]>);
@@ -350,39 +355,11 @@
     });
 
     $effect(() => {
-        const result: Record<string, Map<number, engine.Member[]>> = {};
+        const firstResult: Record<string, Map<number, engine.Member[]>> = {};
+        const lastResult: Record<string, Map<number, engine.Member[]>> = {};
 
         for (const day of sortedDays || []) {
             const firstClassTimes = new Map<number, engine.Member[]>();
-
-            for (const member of group.members) {
-                const events = memberSchedules[member.id] || [];
-                const dayEvents = events.filter(
-                    (ev) => ev.start.toDateString() === day,
-                );
-
-                if (dayEvents.length > 0) {
-                    const firstClassStart = getFirstClassStartTime(member, day);
-                    if (firstClassStart) {
-                        const timeMs = firstClassStart.getTime();
-                        if (!firstClassTimes.has(timeMs)) {
-                            firstClassTimes.set(timeMs, []);
-                        }
-                        firstClassTimes.get(timeMs)!.push(member);
-                    }
-                }
-            }
-
-            result[day] = firstClassTimes;
-        }
-
-        firstClassesByDay = result;
-    });
-
-    $effect(() => {
-        const result: Record<string, Map<number, engine.Member[]>> = {};
-
-        for (const day of sortedDays || []) {
             const lastClassTimes = new Map<number, engine.Member[]>();
 
             for (const member of group.members) {
@@ -392,21 +369,30 @@
                 );
 
                 if (dayEvents.length > 0) {
+                    // First class logic
+                    const firstClassStart = getFirstClassStartTime(member, day);
+                    if (firstClassStart) {
+                        const timeMs = firstClassStart.getTime();
+                        if (!firstClassTimes.has(timeMs))
+                            firstClassTimes.set(timeMs, []);
+                        firstClassTimes.get(timeMs)!.push(member);
+                    }
+                    // Last class logic
                     const lastClassEnd = getLastClassEndTime(member, day);
                     if (lastClassEnd) {
                         const timeMs = lastClassEnd.getTime();
-                        if (!lastClassTimes.has(timeMs)) {
+                        if (!lastClassTimes.has(timeMs))
                             lastClassTimes.set(timeMs, []);
-                        }
                         lastClassTimes.get(timeMs)!.push(member);
                     }
                 }
             }
-
-            result[day] = lastClassTimes;
+            firstResult[day] = firstClassTimes;
+            lastResult[day] = lastClassTimes;
         }
 
-        lastClassesByDay = result;
+        firstClassesByDay = firstResult;
+        lastClassesByDay = lastResult;
     });
 
     $effect(() => {
@@ -435,9 +421,13 @@
 
             items.sort((a, b) => {
                 const timeA =
-                    a.type === "free_block" ? a.block.start.getTime() : a.time;
+                    a.type === "free_block"
+                        ? a.block.start.getTime()
+                        : a.time;
                 const timeB =
-                    b.type === "free_block" ? b.block.start.getTime() : b.time;
+                    b.type === "free_block"
+                        ? b.block.start.getTime()
+                        : b.time;
                 return timeA - timeB;
             });
 
@@ -449,19 +439,21 @@
 </script>
 
 {#if !mounted}
-    <div class="flex justify-center items-center absolute h-full w-full">
+    <div
+        class="flex justify-center items-center absolute h-full w-full bg-white dark:bg-zinc-950 transition-colors duration-300"
+    >
         <div>
             <h1
                 in:fly={{ duration: 500, y: 20 }}
                 out:fly={{ duration: 500, y: -20, delay: 250 }}
-                class="text-3xl font-semibold text-black falt"
+                class="text-3xl font-semibold text-black dark:text-white falt"
             >
                 Tussenuren
             </h1>
             <p
                 in:fly={{ duration: 500, y: 10, delay: 250 }}
                 out:fly={{ duration: 500, y: -10 }}
-                class="falt text-right opacity-65 text-xs"
+                class="falt text-right opacity-65 text-xs text-black dark:text-zinc-400"
             >
                 een app bijsven
             </p>
@@ -470,23 +462,26 @@
 {:else}
     <div
         in:fade={{ delay: 500 }}
-        class="flex gap-0 h-screen bg-white overflow-hidden"
+        class="flex gap-0 h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 overflow-hidden transition-colors duration-300"
     >
         <div class="w-80 p-6 mt-12 overflow-y-auto hidden lg:flex flex-col">
             <div style="flex-shrink: 0;">
                 <div class="flex gap-3 items-center">
-                    <h1 class="text-2xl font-bold">
+                    <h1 class="text-2xl font-bold dark:text-white">
                         {group.name}
                     </h1>
                 </div>
-                <p class="text-xs text-gray-500 mt-1">
+                <p class="text-xs text-gray-500 dark:text-zinc-400 mt-1">
                     {group.members.length}
                     {group.members.length === 1 ? "lid" : "leden"}
                 </p>
             </div>
 
             <div class="mt-8 flex flex-col min-h-0">
-                <h3 class="text-sm font-semibold mb-3" style="flex-shrink: 0;">
+                <h3
+                    class="text-sm font-semibold mb-3 dark:text-zinc-300"
+                    style="flex-shrink: 0;"
+                >
                     Members
                 </h3>
 
@@ -495,12 +490,12 @@
                         type="text"
                         placeholder="Zoeken..."
                         bind:value={searchQuery}
-                        class="w-full px-3 py-2 text-xs border border-black/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-black/20"
+                        class="w-full px-3 py-2 text-xs border border-black/10 dark:border-white/10 dark:bg-zinc-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20 transition-colors"
                     />
                 </div>
 
                 <div
-                    class="space-y-2 overflow-y-auto"
+                    class="space-y-2 overflow-y-auto pr-2"
                     bind:this={sidebarContainer}
                 >
                     {#each getFilteredMembers() as member, i}
@@ -512,10 +507,10 @@
                                 delay: Math.min(i * 25, 250) + 600,
                             }}
                             onclick={() => toggleMember(member.id)}
-                            class={`w-full text-left px-3 py-2 rounded-lg transition-all text-xs cursor-pointer ${
+                            class={`w-full text-left px-3 py-2 rounded-lg transition-all text-xs cursor-pointer border ${
                                 isSelected
-                                    ? "bg-black text-white border border-black"
-                                    : "bg-gray-50 text-gray-700 border border-transparent hover:bg-gray-100"
+                                    ? "bg-black text-white border-black dark:bg-white dark:text-black dark:border-white"
+                                    : "bg-gray-50 text-gray-700 border-transparent hover:bg-gray-100 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
                             }`}
                         >
                             <div class="flex justify-between items-center">
@@ -530,12 +525,17 @@
             </div>
         </div>
 
-        <div class="h-full w-px bg-black/10 lg:block hidden"></div>
+        <div
+            class="h-full w-px bg-black/10 dark:bg-white/10 lg:block hidden"
+        ></div>
 
-        <div class="flex-1 overflow-y-auto p-6 pt-14" data-scroll-container>
+        <div
+            class="flex-1 overflow-y-auto p-6 pt-14"
+            data-scroll-container
+        >
             {#if !group.schedules.length}
                 <div
-                    class="flex flex-col items-center mt-12 opacity-60 text-center"
+                    class="flex flex-col items-center mt-12 opacity-60 text-center dark:text-zinc-400"
                 >
                     <p class="text-sm">Geen gedeelde tussenuren gevonden</p>
                     <p class="text-xs mt-2 opacity-70">
@@ -555,7 +555,7 @@
                             class="mb-8 last:mb-0 lg:min-w-lg"
                         >
                             <h2
-                                class="text-sm font-semibold opacity-60 uppercase tracking-wide mb-4"
+                                class="text-sm font-semibold opacity-60 uppercase tracking-wide mb-4 dark:text-zinc-400"
                                 data-time-anchor={day}
                                 data-time-anchor-iso={new Date(day)
                                     .toISOString()
@@ -568,30 +568,36 @@
                                 {#each timelineByDay[day] || [] as item}
                                     {#if item.type === "first_class"}
                                         <div
-                                            class="px-4 py-3 bg-blue-50/50 rounded-lg border border-blue-100"
+                                            class="px-4 py-3 rounded-lg border
+                                            bg-blue-50/50 border-blue-100
+                                            dark:bg-blue-900/20 dark:border-blue-500/20"
                                         >
                                             <div
                                                 class="flex items-center gap-2"
                                             >
                                                 <span
-                                                    class="font-mono text-sm font-medium text-blue-900"
+                                                    class="font-mono text-sm font-medium
+                                                    text-blue-900 dark:text-blue-200"
                                                 >
                                                     {formatTime(
                                                         new Date(item.time),
                                                     )}
                                                 </span>
-                                                <span class="text-xs opacity-50"
+                                                <span
+                                                    class="text-xs opacity-50 dark:text-blue-300"
                                                     >• Starttijd</span
                                                 >
                                             </div>
                                             <span
-                                                class="text-xs text-blue-800 block mt-1"
+                                                class="text-xs block mt-1
+                                                text-blue-800 dark:text-blue-300"
                                             >
                                                 {item.members
                                                     .map((m) => m.username)
                                                     .join(", ")}
                                             </span>
                                         </div>
+
                                     {:else if item.type === "free_block"}
                                         {@const block = item.block}
                                         {@const hasSelectedMember =
@@ -604,15 +610,15 @@
                                                     block.start,
                                                     block.end,
                                                 )
-                                                    ? "border border-yellow-500 bg-yellow-50/30"
+                                                    ? "border-yellow-500 bg-yellow-50/30 dark:bg-yellow-500/10 dark:border-yellow-500/50"
                                                     : hasSelectedMember
-                                                      ? "border border-black bg-black/5"
-                                                      : "border border-black/15 bg-muted/30"
+                                                      ? "border-black bg-black/5 dark:border-white dark:bg-white/10"
+                                                      : "border-black/15 bg-muted/30 dark:border-white/10 dark:bg-zinc-900"
                                             }`}
                                         >
                                             <div class="px-4 py-3">
                                                 <div
-                                                    class="flex items-center gap-2"
+                                                    class="flex items-center gap-2 dark:text-zinc-200"
                                                 >
                                                     <span
                                                         class="font-mono text-sm font-medium"
@@ -632,7 +638,9 @@
                                                         )})
                                                     </span>
                                                 </div>
-                                                <p class="text-xs mt-2">
+                                                <p
+                                                    class="text-xs mt-2 dark:text-zinc-300"
+                                                >
                                                     {#each block.users as u, i}
                                                         {@const events =
                                                             memberSchedules[
@@ -652,7 +660,7 @@
                                                                 selectedMembers.has(
                                                                     u.id,
                                                                 )
-                                                                    ? "font-semibold text-black"
+                                                                    ? "font-semibold text-black dark:text-white"
                                                                     : isDone
                                                                       ? "opacity-50 italic"
                                                                       : "opacity-60"
@@ -670,26 +678,32 @@
                                                 </p>
                                             </div>
                                         </div>
+
                                     {:else if item.type === "last_class"}
                                         <div
-                                            class="px-4 py-3 bg-emerald-50/50 rounded-lg border border-emerald-100"
+                                            class="px-4 py-3 rounded-lg border
+                                            bg-emerald-50/50 border-emerald-100
+                                            dark:bg-emerald-900/20 dark:border-emerald-500/20"
                                         >
                                             <div
                                                 class="flex items-center gap-2"
                                             >
                                                 <span
-                                                    class="font-mono text-sm font-medium text-emerald-900"
+                                                    class="font-mono text-sm font-medium
+                                                    text-emerald-900 dark:text-emerald-200"
                                                 >
                                                     {formatTime(
                                                         new Date(item.time),
                                                     )}
                                                 </span>
-                                                <span class="text-xs opacity-50"
+                                                <span
+                                                    class="text-xs opacity-50 dark:text-emerald-300"
                                                     >• Uittijd</span
                                                 >
                                             </div>
                                             <span
-                                                class="text-xs text-emerald-800 block mt-1"
+                                                class="text-xs block mt-1
+                                                text-emerald-800 dark:text-emerald-300"
                                             >
                                                 {item.members
                                                     .map((m) => m.username)
