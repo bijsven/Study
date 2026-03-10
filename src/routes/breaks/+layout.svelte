@@ -6,6 +6,8 @@
     import { fade, fly } from "svelte/transition";
     import { cubicOut } from "svelte/easing";
 
+    import { ModeWatcher } from "mode-watcher";
+
     let { children } = $props();
 </script>
 
@@ -13,6 +15,8 @@
     <link rel="icon" href={favicon} />
     <title>Tussenuren</title>
 </svelte:head>
+
+<ModeWatcher />
 
 {#if !pb.authStore.record?.data.somtoday_calendar || !pb.authStore.record?.data.somtoday_calendar.includes("api.somtoday.nl")}
     <div
