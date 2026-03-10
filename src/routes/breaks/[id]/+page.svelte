@@ -125,6 +125,36 @@
         });
     }
 
+    onMount(() => {
+        window.RetrieveCalendarFromUser = async (username: string) => {
+            try {
+                const id = data.params.id;
+
+                const { members } = await engine.getGeneralInfo(id);
+
+                const member = members.find(
+                    (m) => m.username.toLowerCase() === username.toLowerCase(),
+                );
+
+                if (!member) {
+                    console.warn(
+                        `[RetrieveCalendarFromUser] User not found: ${username}`,
+                    );
+                    return null;
+                }
+
+                console.log(
+                    `[RetrieveCalendarFromUser] ${member.username} -> ${member.ical_link}`,
+                );
+
+                return member.ical_link;
+            } catch (err) {
+                console.error("[RetrieveCalendarFromUser] Failed:", err);
+                return null;
+            }
+        };
+    });
+
     function checkAndScrollToNextDay() {
         if (!sortedDays || sortedDays.length === 0) return;
 

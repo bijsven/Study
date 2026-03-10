@@ -4,6 +4,7 @@ declare global {
   interface Window {
     SetWallpaper(): void;
     saveBackgroundFile(file: File): Promise<void>;
+    RetrieveCalendarFromUser(username: String): Promise<string>;
   }
 
   namespace App {

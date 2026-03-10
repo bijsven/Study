@@ -7,8 +7,6 @@
     import { cubicOut } from "svelte/easing";
 
     let { children } = $props();
-
-    onMount(() => {});
 </script>
 
 <svelte:head>
