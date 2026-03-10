@@ -200,21 +200,6 @@
         const id = data.params.id;
         localStorage.setItem("breaks:last", id);
 
-        // --- DARK MODE LOGIC (Zonder Tailwind Config aanpassing) ---
-        // We kijken naar de systeemvoorkeur en zetten de class 'dark' op documentElement
-        const darkModeQuery = window.matchMedia("(prefers-color-scheme: dark)");
-        const applyTheme = (e: MediaQueryList | MediaQueryListEvent) => {
-            if (e.matches) {
-                document.documentElement.classList.add("dark");
-            } else {
-                document.documentElement.classList.remove("dark");
-            }
-        };
-        // Initial check en listener
-        applyTheme(darkModeQuery);
-        darkModeQuery.addEventListener("change", applyTheme);
-        // ---------------------------------------------------------
-
         const loadData = async () => {
             const { group: groupInfo, members } =
                 await engine.getGeneralInfo(id);
