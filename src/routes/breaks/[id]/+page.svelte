@@ -91,29 +91,22 @@
 
     function scrollToCurrentTime(attempt = 0) {
         if (!scrollContainer || !mounted) return;
-
+    
+        // We wachten even langer zodat de fly-animaties gestart zijn
         requestAnimationFrame(() => {
             const now = new Date();
-            const todayISO = now.toISOString().slice(0, 10);
+            const todayISO = now.toLocaleDateString('sv-SE');
             const selector = `[data-time-anchor-iso="${todayISO}"]`;
-            const targetElement = scrollContainer!.querySelector(
-                selector,
-            ) as HTMLElement | null;
-
-            if (targetElement && scrollContainer) {
-                const containerRect = scrollContainer.getBoundingClientRect();
-                const targetRect = targetElement.getBoundingClientRect();
-                const offset =
-                    targetRect.top -
-                    containerRect.top +
-                    scrollContainer.scrollTop -
-                    80;
-                scrollContainer.scrollTo({
-                    top: Math.max(0, offset),
+            const targetElement = scrollContainer!.querySelector(selector) as HTMLElement | null;
+    
+            if (targetElement) {
+                targetElement.style.scrollMarginTop = "100px"; 
+                targetElement.scrollIntoView({
                     behavior: "smooth",
+                    block: "start"
                 });
-            } else if (attempt < 3) {
-                setTimeout(() => scrollToCurrentTime(attempt + 1), 120);
+            } else if (attempt < 5) {
+                setTimeout(() => scrollToCurrentTime(attempt + 1), 350);
             }
         });
     }
@@ -570,9 +563,7 @@
                                 <h2
                                     class="text-sm font-semibold opacity-60 uppercase tracking-wide mb-4 dark:text-zinc-400"
                                     data-time-anchor={day}
-                                    data-time-anchor-iso={new Date(day)
-                                        .toISOString()
-                                        .slice(0, 10)}
+                                    data-time-anchor-iso={new Date(day).toLocaleDateString('sv-SE')}
                                 >
                                     {formatDate(new Date(day as string))}
                                 </h2>
