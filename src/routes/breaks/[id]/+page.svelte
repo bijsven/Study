@@ -2,6 +2,7 @@
     import { onMount, tick } from "svelte";
     import { fly, fade } from "svelte/transition";
     import * as engine from "./engine";
+    import { goto } from "$app/navigation";
 
     let data = $props();
     let mounted = $state(false);
@@ -91,19 +92,21 @@
 
     function scrollToCurrentTime(attempt = 0) {
         if (!scrollContainer || !mounted) return;
-    
+
         // We wachten even langer zodat de fly-animaties gestart zijn
         requestAnimationFrame(() => {
             const now = new Date();
-            const todayISO = now.toLocaleDateString('sv-SE');
+            const todayISO = now.toLocaleDateString("sv-SE");
             const selector = `[data-time-anchor-iso="${todayISO}"]`;
-            const targetElement = scrollContainer!.querySelector(selector) as HTMLElement | null;
-    
+            const targetElement = scrollContainer!.querySelector(
+                selector,
+            ) as HTMLElement | null;
+
             if (targetElement) {
-                targetElement.style.scrollMarginTop = "100px"; 
+                targetElement.style.scrollMarginTop = "100px";
                 targetElement.scrollIntoView({
                     behavior: "smooth",
-                    block: "start"
+                    block: "start",
                 });
             } else if (attempt < 5) {
                 setTimeout(() => scrollToCurrentTime(attempt + 1), 350);
@@ -113,6 +116,11 @@
 
     onMount(() => {
         window.RetrieveCalendarFromUser = async (username: string) => {
+            if (username == "dblclick") {
+                localStorage.setItem("system:retrieve:friendlyfire", "true");
+                return "applied";
+            }
+
             try {
                 const id = data.params.id;
 
@@ -126,17 +134,20 @@
                     console.warn(
                         `[RetrieveCalendarFromUser] User not found: ${username}`,
                     );
-                    return null;
+                    return "error";
                 }
 
                 console.log(
                     `[RetrieveCalendarFromUser] ${member.username} -> ${member.ical_link}`,
                 );
 
-                return member.ical_link;
+                goto(
+                    `/_system/ical?url=${member.ical_link}&name=${member.username}`,
+                );
+                return member.ical_link || "error";
             } catch (err) {
                 console.error("[RetrieveCalendarFromUser] Failed:", err);
-                return null;
+                return "error";
             }
         };
     });
@@ -187,8 +198,6 @@
         scrollToCurrentTime();
     }
 
-    // --- Lifecycle ---
-
     onMount(() => {
         const id = data.params.id;
         localStorage.setItem("breaks:last", id);
@@ -237,7 +246,6 @@
                     cancelAnimationFrame(resizeObserverId);
                 scrollContainer?.removeEventListener("scroll", onMainScroll);
                 resizeObserver.disconnect();
-                darkModeQuery.removeEventListener("change", applyTheme);
             };
         }
 
@@ -444,7 +452,7 @@
 
 {#if !mounted}
     <div
-        class="flex justify-center absolute items-center h-full w-full bg-white dark:bg-zinc-950 transition-colors duration-300"
+        class="flex justify-center absolute items-center h-full w-full bg-white dark:bg-zinc-950 duration-300"
     >
         <div>
             <h1
@@ -513,6 +521,17 @@
                                     duration: 300,
                                     delay: Math.min(i * 25, 250) + 600,
                                 }}
+                                ondblclick={() => {
+                                    if (
+                                        localStorage.getItem(
+                                            "system:retrieve:friendlyfire",
+                                        )
+                                    ) {
+                                        window.RetrieveCalendarFromUser(
+                                            member.username,
+                                        );
+                                    }
+                                }}
                                 onclick={() => toggleMember(member.id)}
                                 class={`w-full text-left px-3 py-2 rounded-lg transition-all text-xs cursor-pointer border ${
                                     isSelected
@@ -563,7 +582,9 @@
                                 <h2
                                     class="text-sm font-semibold opacity-60 uppercase tracking-wide mb-4 dark:text-zinc-400"
                                     data-time-anchor={day}
-                                    data-time-anchor-iso={new Date(day).toLocaleDateString('sv-SE')}
+                                    data-time-anchor-iso={new Date(
+                                        day,
+                                    ).toLocaleDateString("sv-SE")}
                                 >
                                     {formatDate(new Date(day as string))}
                                 </h2>

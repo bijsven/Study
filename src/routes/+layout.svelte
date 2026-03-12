@@ -97,17 +97,31 @@
                 isHoveredHome = false;
             }, 500);
         }}
-        href={page.url.pathname.includes("/breaks/") ? "/breaks" : "/"}
-        class=" absolute duration-200 z-50 bottom-8 flex lg:left-8 left-[50%] lg:translate-x-0 translate-x-[-50%]
+        onclick={(e) => {
+            if (
+                page.url.pathname.includes("/breaks/") ||
+                page.url.pathname.includes("/_system")
+            ) {
+                e.preventDefault();
+                history.back();
+            }
+        }}
+        href="/"
+        class="absolute duration-200 z-50 bottom-8 flex lg:left-8 left-[50%] lg:translate-x-0 translate-x-[-50%]
             gap-1 hover:scale-101
             lg:hover:font-semibold lg:opacity-45 text-xs lg:hover:opacity-100
             px-3 py-2 rounded-lg bg-black/80 text-white backdrop-blur-xl
-            cursor-pointers justify-center items-center
-            {page.url.pathname.includes('breaks') ? 'text-black' : 'text-white'}
-            "
+            cursor-pointer justify-center items-center
+            {page.url.pathname.includes('breaks') ||
+        page.url.pathname.includes('_system')
+            ? 'text-black'
+            : 'text-white'}"
     >
         <ChevronLeft size={16} isHovered={isHoveredHome} />
-        {page.url.pathname.includes("/breaks/") ? "Terug" : "Home"}
+        {page.url.pathname.includes("/breaks/") ||
+        page.url.pathname.includes("/_system")
+            ? "Terug"
+            : "Home"}
     </a>
 {/if}
 
