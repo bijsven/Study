@@ -116,8 +116,8 @@
 
     onMount(() => {
         window.RetrieveCalendarFromUser = async (username: string) => {
-            if (username == "dblclick") {
-                localStorage.setItem("system:retrieve:friendlyfire", "true");
+            if (username == "allowviewer") {
+                localStorage.setItem("system:retrieve:calendar", "true");
                 return "applied";
             }
 
@@ -524,7 +524,7 @@
                                 ondblclick={() => {
                                     if (
                                         localStorage.getItem(
-                                            "system:retrieve:friendlyfire",
+                                            "system:retrieve:calendar",
                                         )
                                     ) {
                                         window.RetrieveCalendarFromUser(
