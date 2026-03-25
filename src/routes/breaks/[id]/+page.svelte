@@ -639,11 +639,10 @@
                                         {:else if item.type === "free_block"}
                                             {@const block = item.block}
                                             {@const hasSelectedMember =
-                                                const hasSelectedMember =
-                                                    selectedMembers.size === 0 ||
-                                                    Array.from(selectedMembers).every((id) =>
-                                                        block.users.some((u) => u.id === id),
-                                                    );
+                                                selectedMembers.size === 0 ||
+                                                Array.from(selectedMembers).every((id) =>
+                                                    block.users.some((u) => u.id === id),
+                                                );
                                             <div
                                                 class={`border rounded-lg overflow-hidden transition-all ${
                                                     isCurrentHour(
