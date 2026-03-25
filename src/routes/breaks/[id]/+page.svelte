@@ -25,6 +25,18 @@
     let resizeObserverId: number | null = null;
     let intervalId: ReturnType<typeof setInterval> | null = null;
 
+    function hasSharedFreeBlock(memberId: string): boolean {
+    if (selectedMembers.size === 0) return true;
+
+    return group.schedules.some((block) => {
+        const userIds = block.users.map((u) => u.id);
+
+        if (!userIds.includes(memberId)) return false;
+
+        return Array.from(selectedMembers).every((id) => userIds.includes(id));
+    });
+}
+
     // --- Data Processing & Logic ---
 
     function onMainScroll() {
@@ -57,11 +69,13 @@
     function getFilteredMembers() {
         let filtered = searchQuery.trim()
             ? group.members.filter((m) =>
-                  m.username.toLowerCase().includes(searchQuery.toLowerCase()),
-              )
+                m.username.toLowerCase().includes(searchQuery.toLowerCase()),
+            )
             : [...group.members];
 
-        return [...filtered].sort((a, b) => {
+        filtered = filtered.filter((m) => hasSharedFreeBlock(m.id));
+
+        return filtered.sort((a, b) => {
             const hoursA = calculateWeeklyHours(a.id);
             const hoursB = calculateWeeklyHours(b.id);
             return hoursB - hoursA;
