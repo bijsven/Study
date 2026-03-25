@@ -643,6 +643,7 @@
                                                 Array.from(selectedMembers).every((id) =>
                                                     block.users.some((u) => u.id === id),
                                                 )
+                                            }
                                             <div
                                                 class={`border rounded-lg overflow-hidden transition-all ${
                                                     isCurrentHour(
