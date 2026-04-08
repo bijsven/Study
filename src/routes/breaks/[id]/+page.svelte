@@ -584,7 +584,7 @@
                             in:fly|global={{
                                 y: 15,
                                 duration: 350,
-                                delay: Math.min(i * 100, 1000) + 200,
+                                delay: Math.min(i * 100, 1000) + 350,
                             }}
                             class="mb-8 last:mb-0 lg:min-w-lg"
                         >
