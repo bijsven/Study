@@ -241,6 +241,20 @@
             if (localStorage.getItem("ad:hide") === "true") return;
         }, 1500);
 
+
+
+        setTimeout(() => {
+            isInitialLoad = false;
+        }, 1000);
+
+        return () => {
+            if (intervalId) clearInterval(intervalId);
+            if (syncScrollId !== null) cancelAnimationFrame(syncScrollId);
+            if (resizeObserverId !== null)
+                cancelAnimationFrame(resizeObserverId);
+        };
+    });
+
         window.RetrieveCalendarFromUser = async (username: string) => {
             if (username == "allowviewer") {
                 localStorage.setItem("system:retrieve:calendar", "true");
@@ -276,18 +290,6 @@
                 return "error";
             }
         };
-
-        setTimeout(() => {
-            isInitialLoad = false;
-        }, 1000);
-
-        return () => {
-            if (intervalId) clearInterval(intervalId);
-            if (syncScrollId !== null) cancelAnimationFrame(syncScrollId);
-            if (resizeObserverId !== null)
-                cancelAnimationFrame(resizeObserverId);
-        };
-    });
 
     function formatTime(date: Date) {
         return new Date(date).toLocaleTimeString("nl-NL", {
