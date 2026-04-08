@@ -583,8 +583,7 @@
                         <div
                             in:fly|global={{
                                 y: 15,
-                                duration: 1000,
-                                easing: elasticOut,
+                                duration: 350,
                                 delay: Math.min(i * 100, 1000) + 200,
                             }}
                             class="mb-8 last:mb-0 lg:min-w-lg"
