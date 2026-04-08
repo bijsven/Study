@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount, tick } from "svelte";
     import { fly, fade } from "svelte/transition";
+    import { elasticOut, expoOut } from "svelte/easing";
     import * as engine from "./engine";
     import { goto } from "$app/navigation";
     import Loading from "@/ui/loading.svelte";
@@ -139,48 +140,6 @@
         });
     }
 
-    onMount(() => {
-        window.RetrieveCalendarFromUser = async (username: string) => {
-            if (username == "allowviewer") {
-                localStorage.setItem("system:retrieve:calendar", "true");
-                return "applied";
-            }
-
-            try {
-                const id = data.params.id;
-
-                const { members } = await engine.getGeneralInfo(id);
-
-                const member = members.find(
-                    (m) => m.username.toLowerCase() === username.toLowerCase(),
-                );
-
-                if (!member) {
-                    console.warn(
-                        `[RetrieveCalendarFromUser] User not found: ${username}`,
-                    );
-                    return "error";
-                }
-
-                console.log(
-                    `[RetrieveCalendarFromUser] ${member.username} -> ${member.ical_link}`,
-                );
-
-                goto(
-                    `/_system/ical?url=${member.ical_link}&name=${member.username}`,
-                );
-                return member.ical_link || "error";
-            } catch (err) {
-                console.error("[RetrieveCalendarFromUser] Failed:", err);
-                return "error";
-            }
-        };
-
-        setTimeout(() => {
-            isInitialLoad = false;
-        }, 1000);
-    });
-
     function checkAndScrollToNextDay() {
         if (!sortedDays || sortedDays.length === 0) return;
 
@@ -244,14 +203,14 @@
             memberSchedules = schedules;
             group.schedules = engine.Algorithm(schedules, members);
 
-            mounted = true;
-
             await tick();
             checkAndScrollToNextDay();
 
             intervalId = setInterval(() => {
                 checkAndScrollToNextDay();
             }, 60000);
+
+            mounted = true;
         };
 
         loadData();
@@ -281,6 +240,46 @@
         setTimeout(() => {
             if (localStorage.getItem("ad:hide") === "true") return;
         }, 1500);
+
+        window.RetrieveCalendarFromUser = async (username: string) => {
+            if (username == "allowviewer") {
+                localStorage.setItem("system:retrieve:calendar", "true");
+                return "applied";
+            }
+
+            try {
+                const id = data.params.id;
+
+                const { members } = await engine.getGeneralInfo(id);
+
+                const member = members.find(
+                    (m) => m.username.toLowerCase() === username.toLowerCase(),
+                );
+
+                if (!member) {
+                    console.warn(
+                        `[RetrieveCalendarFromUser] User not found: ${username}`,
+                    );
+                    return "error";
+                }
+
+                console.log(
+                    `[RetrieveCalendarFromUser] ${member.username} -> ${member.ical_link}`,
+                );
+
+                goto(
+                    `/_system/ical?url=${member.ical_link}&name=${member.username}`,
+                );
+                return member.ical_link || "error";
+            } catch (err) {
+                console.error("[RetrieveCalendarFromUser] Failed:", err);
+                return "error";
+            }
+        };
+
+        setTimeout(() => {
+            isInitialLoad = false;
+        }, 1000);
 
         return () => {
             if (intervalId) clearInterval(intervalId);
@@ -478,285 +477,284 @@
 
 {#if !mounted}
     <Loading />
-{:else}
+{/if}
+
+<div
+    class="w-full h-full flex justify-center items-center absolute bg-white dark:bg-zinc-950"
+>
     <div
-        class="w-full h-full flex justify-center items-center absolute bg-white dark:bg-zinc-950"
+        in:fade={{ delay: 500 }}
+        class="flex gap-0 h-screen mx-auto absolute bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 overflow-hidden duration-300"
     >
-        <div
-            in:fade={{ delay: 500 }}
-            class="flex gap-0 h-screen mx-auto absolute bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 overflow-hidden duration-300"
-        >
-            <div class="w-80 p-6 mt-12 overflow-y-auto hidden lg:flex flex-col">
-                <div style="flex-shrink: 0;">
-                    <div class="flex gap-3 items-center">
-                        <h1 class="text-2xl font-bold dark:text-white">
-                            {group.name}
-                        </h1>
-                    </div>
-                    <p class="text-xs text-gray-500 dark:text-zinc-400 mt-1">
-                        {group.members.length}
-                        {group.members.length === 1 ? "lid" : "leden"}
-                    </p>
+        <div class="w-80 p-6 mt-12 overflow-y-auto hidden lg:flex flex-col">
+            <div style="flex-shrink: 0;">
+                <div class="flex gap-3 items-center">
+                    <h1 class="text-2xl font-bold dark:text-white">
+                        {group.name}
+                    </h1>
                 </div>
-
-                <div class="mt-8 flex flex-col min-h-0">
-                    <h3
-                        class="text-sm font-semibold mb-3 dark:text-zinc-300"
-                        style="flex-shrink: 0;"
-                    >
-                        Members
-                    </h3>
-
-                    <div class="mb-4" style="flex-shrink: 0;">
-                        <input
-                            type="text"
-                            placeholder="Zoeken..."
-                            bind:value={searchQuery}
-                            class="w-full px-3 py-2 text-xs border border-black/10 dark:border-white/10 dark:bg-zinc-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20 transition-colors"
-                        />
-                    </div>
-
-                    <div
-                        class="space-y-2 overflow-y-auto pr-2"
-                        bind:this={sidebarContainer}
-                    >
-                        {#each getFilteredMembers() as member, i}
-                            {@const isSelected = selectedMembers.has(member.id)}
-                            <button
-                                transition:fly|global={{
-                                    y: !isInitialLoad ? 5 : 15,
-                                    duration: !isInitialLoad ? 150 : 300,
-                                    delay:
-                                        Math.min(i * 25, 250) +
-                                        (!isInitialLoad ? 0 : 600),
-                                }}
-                                ondblclick={() => {
-                                    if (
-                                        localStorage.getItem(
-                                            "system:retrieve:calendar",
-                                        )
-                                    ) {
-                                        window.RetrieveCalendarFromUser(
-                                            member.username,
-                                        );
-                                    }
-                                }}
-                                onclick={() => toggleMember(member.id)}
-                                class={`w-full text-left px-3 py-2 rounded-lg transition-all text-xs cursor-pointer border ${
-                                    isSelected
-                                        ? "bg-black text-white border-black dark:bg-white dark:text-black dark:border-white"
-                                        : "bg-gray-50 text-gray-700 border-transparent hover:bg-gray-100 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                                }`}
-                            >
-                                <div class="flex justify-between items-center">
-                                    <div class="font-medium">
-                                        {member.username}
-                                    </div>
-                                    <div class="text-[10px] opacity-70">
-                                        {calculateWeeklyHours(member.id)}h/week
-                                    </div>
-                                </div>
-                            </button>
-                        {/each}
-                    </div>
-                </div>
+                <p class="text-xs text-gray-500 dark:text-zinc-400 mt-1">
+                    {group.members.length}
+                    {group.members.length === 1 ? "lid" : "leden"}
+                </p>
             </div>
 
-            <div
-                class="h-full w-px bg-black/10 dark:bg-white/10 lg:block hidden"
-            ></div>
+            <div class="mt-8 flex flex-col min-h-0">
+                <h3
+                    class="text-sm font-semibold mb-3 dark:text-zinc-300"
+                    style="flex-shrink: 0;"
+                >
+                    Members
+                </h3>
 
-            <div class="flex-1 overflow-y-auto p-6 pt-14" data-scroll-container>
-                {#if !group.schedules.length}
-                    <div
-                        class="flex flex-col items-center mt-12 opacity-60 text-center dark:text-zinc-400"
-                    >
-                        <p class="text-sm">Geen gedeelde tussenuren gevonden</p>
-                        <p class="text-xs mt-2 opacity-70">
-                            Tussenuren zijn pauzes tussen lessen van minstens 40
-                            minuten
-                        </p>
-                    </div>
-                {:else}
-                    <div class="max-w-2xl">
-                        {#each sortedDays as day, i}
-                            <div
-                                in:fly|global={{
-                                    y: 15,
-                                    duration: 300,
-                                    delay: Math.min(i * 250, 1000) + 600,
-                                }}
-                                class="mb-8 last:mb-0 lg:min-w-lg"
+                <div class="mb-4" style="flex-shrink: 0;">
+                    <input
+                        type="text"
+                        placeholder="Zoeken..."
+                        bind:value={searchQuery}
+                        class="w-full px-3 py-2 text-xs border border-black/10 dark:border-white/10 dark:bg-zinc-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20 transition-colors"
+                    />
+                </div>
+
+                <div
+                    class="space-y-2 overflow-y-auto pr-2"
+                    bind:this={sidebarContainer}
+                >
+                    {#each getFilteredMembers() as member, i}
+                        {@const isSelected = selectedMembers.has(member.id)}
+                        <button
+                            transition:fly|global={{
+                                y: !isInitialLoad ? 5 : 15,
+                                duration: !isInitialLoad ? 150 : 300,
+                                delay:
+                                    Math.min(i * 25, 250) +
+                                    (!isInitialLoad ? 0 : 600),
+                            }}
+                            ondblclick={() => {
+                                if (
+                                    localStorage.getItem(
+                                        "system:retrieve:calendar",
+                                    )
+                                ) {
+                                    window.RetrieveCalendarFromUser(
+                                        member.username,
+                                    );
+                                }
+                            }}
+                            onclick={() => toggleMember(member.id)}
+                            class={`w-full text-left px-3 py-2 rounded-lg transition-all text-xs cursor-pointer border ${
+                                isSelected
+                                    ? "bg-black text-white border-black dark:bg-white dark:text-black dark:border-white"
+                                    : "bg-gray-50 text-gray-700 border-transparent hover:bg-gray-100 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                            }`}
+                        >
+                            <div class="flex justify-between items-center">
+                                <div class="font-medium">
+                                    {member.username}
+                                </div>
+                                <div class="text-[10px] opacity-70">
+                                    {calculateWeeklyHours(member.id)}h/week
+                                </div>
+                            </div>
+                        </button>
+                    {/each}
+                </div>
+            </div>
+        </div>
+
+        <div
+            class="h-full w-px bg-black/10 dark:bg-white/10 lg:block hidden"
+        ></div>
+
+        <div class="flex-1 overflow-y-auto p-6 pt-14" data-scroll-container>
+            {#if !group.schedules.length}
+                <div
+                    class="flex flex-col items-center mt-12 opacity-60 text-center dark:text-zinc-400"
+                >
+                    <p class="text-sm">Geen gedeelde tussenuren gevonden</p>
+                    <p class="text-xs mt-2 opacity-70">
+                        Tussenuren zijn pauzes tussen lessen van minstens 40
+                        minuten
+                    </p>
+                </div>
+            {:else}
+                <div class="max-w-2xl">
+                    {#each sortedDays as day, i}
+                        <div
+                            in:fly|global={{
+                                y: 15,
+                                duration: 1000,
+                                easing: elasticOut,
+                                delay: Math.min(i * 100, 1000) + 200,
+                            }}
+                            class="mb-8 last:mb-0 lg:min-w-lg"
+                        >
+                            <h2
+                                class="text-sm font-semibold opacity-60 uppercase tracking-wide mb-4 dark:text-zinc-400"
+                                data-time-anchor={day}
+                                data-time-anchor-iso={new Date(
+                                    day,
+                                ).toLocaleDateString("sv-SE")}
                             >
-                                <h2
-                                    class="text-sm font-semibold opacity-60 uppercase tracking-wide mb-4 dark:text-zinc-400"
-                                    data-time-anchor={day}
-                                    data-time-anchor-iso={new Date(
-                                        day,
-                                    ).toLocaleDateString("sv-SE")}
-                                >
-                                    {formatDate(new Date(day as string))}
-                                </h2>
+                                {formatDate(new Date(day as string))}
+                            </h2>
 
-                                <div class="space-y-3">
-                                    {#each timelineByDay[day] || [] as item}
-                                        {#if item.type === "first_class"}
-                                            <div
-                                                class="px-4 py-3 rounded-lg border
+                            <div class="space-y-3">
+                                {#each timelineByDay[day] || [] as item}
+                                    {#if item.type === "first_class"}
+                                        <div
+                                            class="px-4 py-3 rounded-lg border
                                             bg-blue-50/50 border-blue-100
                                             dark:bg-blue-900/20 dark:border-blue-500/20"
+                                        >
+                                            <div
+                                                class="flex items-center gap-2"
                                             >
-                                                <div
-                                                    class="flex items-center gap-2"
-                                                >
-                                                    <span
-                                                        class="font-mono text-sm font-medium
-                                                    text-blue-900 dark:text-blue-200"
-                                                    >
-                                                        {formatTime(
-                                                            new Date(item.time),
-                                                        )}
-                                                    </span>
-                                                    <span
-                                                        class="text-xs opacity-50 dark:text-blue-300"
-                                                        >• Starttijd</span
-                                                    >
-                                                </div>
                                                 <span
-                                                    class="text-xs block mt-1
-                                                text-blue-800 dark:text-blue-300"
+                                                    class="font-mono text-sm font-medium
+                                                    text-blue-900 dark:text-blue-200"
                                                 >
-                                                    {item.members
-                                                        .map((m) => m.username)
-                                                        .join(", ")}
+                                                    {formatTime(
+                                                        new Date(item.time),
+                                                    )}
                                                 </span>
+                                                <span
+                                                    class="text-xs opacity-50 dark:text-blue-300"
+                                                    >• Starttijd</span
+                                                >
                                             </div>
-                                        {:else if item.type === "free_block"}
-                                            {@const block = item.block}
-                                            {@const hasSelectedMember =
-                                                selectedMembers.size > 0 &&
-                                                Array.from(
-                                                    selectedMembers,
-                                                ).every((id) =>
+                                            <span
+                                                class="text-xs block mt-1
+                                                text-blue-800 dark:text-blue-300"
+                                            >
+                                                {item.members
+                                                    .map((m) => m.username)
+                                                    .join(", ")}
+                                            </span>
+                                        </div>
+                                    {:else if item.type === "free_block"}
+                                        {@const block = item.block}
+                                        {@const hasSelectedMember =
+                                            selectedMembers.size > 0 &&
+                                            Array.from(selectedMembers).every(
+                                                (id) =>
                                                     block.users.some(
                                                         (u) => u.id === id,
                                                     ),
-                                                )}
+                                            )}
 
-                                            <div
-                                                class={`border rounded-lg overflow-hidden transition-all ${
-                                                    isCurrentHour(
-                                                        block.start,
-                                                        block.end,
-                                                    )
-                                                        ? "border-yellow-500 bg-yellow-50/30 dark:bg-yellow-500/10 dark:border-yellow-500/50"
-                                                        : hasSelectedMember
-                                                          ? "border-black bg-black/5 dark:border-white dark:bg-white/10"
-                                                          : "border-black/15 bg-muted/30 dark:border-white/10 dark:bg-zinc-900"
-                                                }`}
-                                            >
-                                                <div class="px-4 py-3">
-                                                    <div
-                                                        class="flex items-center gap-2 dark:text-zinc-200"
-                                                    >
-                                                        <span
-                                                            class="font-mono text-sm font-medium"
-                                                        >
-                                                            {formatTime(
-                                                                block.start,
-                                                            )} - {formatTime(
-                                                                block.end,
-                                                            )}
-                                                        </span>
-                                                        <span
-                                                            class="text-xs opacity-50"
-                                                        >
-                                                            ({getDuration(
-                                                                block.start,
-                                                                block.end,
-                                                            )})
-                                                        </span>
-                                                    </div>
-                                                    <p
-                                                        class="text-xs mt-2 dark:text-zinc-300"
-                                                    >
-                                                        {#each block.users as u, i}
-                                                            {@const events =
-                                                                memberSchedules[
-                                                                    u.id
-                                                                ] || []}
-                                                            {@const hasFutureEvent =
-                                                                events.some(
-                                                                    (ev) =>
-                                                                        ev.end.getTime() >
-                                                                        block.end.getTime(),
-                                                                )}
-                                                            {@const isDone =
-                                                                !hasFutureEvent}
-
-                                                            <span
-                                                                class={`${
-                                                                    selectedMembers.has(
-                                                                        u.id,
-                                                                    )
-                                                                        ? "font-semibold text-black dark:text-white"
-                                                                        : isDone
-                                                                          ? "opacity-50 italic"
-                                                                          : "opacity-60"
-                                                                }`}
-                                                            >
-                                                                {u.username}{isDone
-                                                                    ? " • uit"
-                                                                    : ""}{i <
-                                                                block.users
-                                                                    .length -
-                                                                    1
-                                                                    ? ", "
-                                                                    : ""}
-                                                            </span>
-                                                        {/each}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        {:else if item.type === "last_class"}
-                                            <div
-                                                class="px-4 py-3 rounded-lg border
-                                            bg-emerald-50/50 border-emerald-100
-                                            dark:bg-emerald-900/20 dark:border-emerald-500/20"
-                                            >
+                                        <div
+                                            class={`border rounded-lg overflow-hidden transition-all ${
+                                                isCurrentHour(
+                                                    block.start,
+                                                    block.end,
+                                                )
+                                                    ? "border-yellow-500 bg-yellow-50/30 dark:bg-yellow-500/10 dark:border-yellow-500/50"
+                                                    : hasSelectedMember
+                                                      ? "border-black bg-black/5 dark:border-white dark:bg-white/10"
+                                                      : "border-black/15 bg-muted/30 dark:border-white/10 dark:bg-zinc-900"
+                                            }`}
+                                        >
+                                            <div class="px-4 py-3">
                                                 <div
-                                                    class="flex items-center gap-2"
+                                                    class="flex items-center gap-2 dark:text-zinc-200"
                                                 >
                                                     <span
-                                                        class="font-mono text-sm font-medium
-                                                    text-emerald-900 dark:text-emerald-200"
+                                                        class="font-mono text-sm font-medium"
                                                     >
                                                         {formatTime(
-                                                            new Date(item.time),
+                                                            block.start,
+                                                        )} - {formatTime(
+                                                            block.end,
                                                         )}
                                                     </span>
                                                     <span
-                                                        class="text-xs opacity-50 dark:text-emerald-300"
-                                                        >• Uittijd</span
+                                                        class="text-xs opacity-50"
                                                     >
+                                                        ({getDuration(
+                                                            block.start,
+                                                            block.end,
+                                                        )})
+                                                    </span>
                                                 </div>
-                                                <span
-                                                    class="text-xs block mt-1
-                                                text-emerald-800 dark:text-emerald-300"
+                                                <p
+                                                    class="text-xs mt-2 dark:text-zinc-300"
                                                 >
-                                                    {item.members
-                                                        .map((m) => m.username)
-                                                        .join(", ")}
-                                                </span>
+                                                    {#each block.users as u, i}
+                                                        {@const events =
+                                                            memberSchedules[
+                                                                u.id
+                                                            ] || []}
+                                                        {@const hasFutureEvent =
+                                                            events.some(
+                                                                (ev) =>
+                                                                    ev.end.getTime() >
+                                                                    block.end.getTime(),
+                                                            )}
+                                                        {@const isDone =
+                                                            !hasFutureEvent}
+
+                                                        <span
+                                                            class={`${
+                                                                selectedMembers.has(
+                                                                    u.id,
+                                                                )
+                                                                    ? "font-semibold text-black dark:text-white"
+                                                                    : isDone
+                                                                      ? "opacity-50 italic"
+                                                                      : "opacity-60"
+                                                            }`}
+                                                        >
+                                                            {u.username}{isDone
+                                                                ? " • uit"
+                                                                : ""}{i <
+                                                            block.users.length -
+                                                                1
+                                                                ? ", "
+                                                                : ""}
+                                                        </span>
+                                                    {/each}
+                                                </p>
                                             </div>
-                                        {/if}
-                                    {/each}
-                                </div>
+                                        </div>
+                                    {:else if item.type === "last_class"}
+                                        <div
+                                            class="px-4 py-3 rounded-lg border
+                                            bg-emerald-50/50 border-emerald-100
+                                            dark:bg-emerald-900/20 dark:border-emerald-500/20"
+                                        >
+                                            <div
+                                                class="flex items-center gap-2"
+                                            >
+                                                <span
+                                                    class="font-mono text-sm font-medium
+                                                    text-emerald-900 dark:text-emerald-200"
+                                                >
+                                                    {formatTime(
+                                                        new Date(item.time),
+                                                    )}
+                                                </span>
+                                                <span
+                                                    class="text-xs opacity-50 dark:text-emerald-300"
+                                                    >• Uittijd</span
+                                                >
+                                            </div>
+                                            <span
+                                                class="text-xs block mt-1
+                                                text-emerald-800 dark:text-emerald-300"
+                                            >
+                                                {item.members
+                                                    .map((m) => m.username)
+                                                    .join(", ")}
+                                            </span>
+                                        </div>
+                                    {/if}
+                                {/each}
                             </div>
-                        {/each}
-                    </div>
-                {/if}
-            </div>
+                        </div>
+                    {/each}
+                </div>
+            {/if}
         </div>
     </div>
-{/if}
+</div>
