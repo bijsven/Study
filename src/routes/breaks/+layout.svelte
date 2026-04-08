@@ -7,8 +7,15 @@
     import { cubicOut } from "svelte/easing";
 
     import { ModeWatcher } from "mode-watcher";
+    import Loading from "@/ui/loading.svelte";
 
     let { children } = $props();
+
+    let mounted = $state(false);
+
+    onMount(() => {
+        mounted = true;
+    });
 </script>
 
 <svelte:head>
@@ -18,7 +25,7 @@
 
 <ModeWatcher />
 
-{#if !pb.authStore.record?.data.somtoday_calendar || !pb.authStore.record?.data.somtoday_calendar.includes("api.somtoday.nl")}
+{#if mounted && (!pb.authStore.record?.data.somtoday_calendar || !pb.authStore.record?.data.somtoday_calendar.includes("api.somtoday.nl"))}
     <div
         class="backdrop-blur-xl bg-black/75 z-9998 absolute top-0 left-0 h-full w-full"
         transition:fade={{ duration: 500 }}
@@ -53,8 +60,12 @@
             </a>
         </div>
     </div>
+{:else if mounted}
+    <content class="flex justify-center">
+        {@render children?.()}
+    </content>
+{:else}
+    <div out:fade>
+        <Loading />
+    </div>
 {/if}
-
-<content class="flex justify-center">
-    {@render children?.()}
-</content>

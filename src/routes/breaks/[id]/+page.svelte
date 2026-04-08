@@ -3,9 +3,11 @@
     import { fly, fade } from "svelte/transition";
     import * as engine from "./engine";
     import { goto } from "$app/navigation";
+    import Loading from "@/ui/loading.svelte";
 
     let data = $props();
     let mounted = $state(false);
+    let isInitialLoad = $state(true);
 
     let group = $state({
         name: "",
@@ -26,18 +28,20 @@
     let intervalId: ReturnType<typeof setInterval> | null = null;
 
     function hasSharedFreeBlock(memberId: string): boolean {
-    if (selectedMembers.size === 0) return true;
+        if (selectedMembers.size === 0) {
+            return true;
+        }
 
-    return group.schedules.some((block) => {
-        const userIds = block.users.map((u) => u.id);
+        return group.schedules.some((block) => {
+            const userIds = block.users.map((u) => u.id);
 
-        if (!userIds.includes(memberId)) return false;
+            if (!userIds.includes(memberId)) return false;
 
-        return Array.from(selectedMembers).every((id) => userIds.includes(id));
-    });
-}
-
-    // --- Data Processing & Logic ---
+            return Array.from(selectedMembers).every((id) =>
+                userIds.includes(id),
+            );
+        });
+    }
 
     function onMainScroll() {
         if (syncScrollId !== null) cancelAnimationFrame(syncScrollId);
@@ -69,13 +73,20 @@
     function getFilteredMembers() {
         let filtered = searchQuery.trim()
             ? group.members.filter((m) =>
-                m.username.toLowerCase().includes(searchQuery.toLowerCase()),
-            )
+                  m.username.toLowerCase().includes(searchQuery.toLowerCase()),
+              )
             : [...group.members];
 
         filtered = filtered.filter((m) => hasSharedFreeBlock(m.id));
 
         return filtered.sort((a, b) => {
+            const aSelected = selectedMembers.has(a.id);
+            const bSelected = selectedMembers.has(b.id);
+
+            if (aSelected !== bSelected) {
+                return aSelected ? -1 : 1;
+            }
+
             const hoursA = calculateWeeklyHours(a.id);
             const hoursB = calculateWeeklyHours(b.id);
             return hoursB - hoursA;
@@ -164,6 +175,10 @@
                 return "error";
             }
         };
+
+        setTimeout(() => {
+            isInitialLoad = false;
+        }, 1000);
     });
 
     function checkAndScrollToNextDay() {
@@ -272,11 +287,8 @@
             if (syncScrollId !== null) cancelAnimationFrame(syncScrollId);
             if (resizeObserverId !== null)
                 cancelAnimationFrame(resizeObserverId);
-            darkModeQuery.removeEventListener("change", applyTheme);
         };
     });
-
-    // --- Formatters ---
 
     function formatTime(date: Date) {
         return new Date(date).toLocaleTimeString("nl-NL", {
@@ -465,26 +477,7 @@
 </script>
 
 {#if !mounted}
-    <div
-        class="flex justify-center absolute items-center h-full w-full bg-white dark:bg-zinc-950 duration-300"
-    >
-        <div>
-            <h1
-                in:fly={{ duration: 500, y: 20 }}
-                out:fly={{ duration: 500, y: -20, delay: 250 }}
-                class="text-3xl font-semibold text-black dark:text-white falt"
-            >
-                Tussenuren
-            </h1>
-            <p
-                in:fly={{ duration: 500, y: 10, delay: 250 }}
-                out:fly={{ duration: 500, y: -10 }}
-                class="falt text-right opacity-65 text-xs text-black dark:text-zinc-400"
-            >
-                een app bijsven
-            </p>
-        </div>
-    </div>
+    <Loading />
 {:else}
     <div
         class="w-full h-full flex justify-center items-center absolute bg-white dark:bg-zinc-950"
@@ -531,9 +524,11 @@
                             {@const isSelected = selectedMembers.has(member.id)}
                             <button
                                 transition:fly|global={{
-                                    y: 15,
-                                    duration: 300,
-                                    delay: Math.min(i * 25, 250) + 600,
+                                    y: !isInitialLoad ? 5 : 15,
+                                    duration: !isInitialLoad ? 150 : 300,
+                                    delay:
+                                        Math.min(i * 25, 250) +
+                                        (!isInitialLoad ? 0 : 600),
                                 }}
                                 ondblclick={() => {
                                     if (
@@ -639,11 +634,15 @@
                                         {:else if item.type === "free_block"}
                                             {@const block = item.block}
                                             {@const hasSelectedMember =
-                                                selectedMembers.size === 0 ||
-                                                Array.from(selectedMembers).every((id) =>
-                                                    block.users.some((u) => u.id === id),
-                                                )
-                                            }
+                                                selectedMembers.size > 0 &&
+                                                Array.from(
+                                                    selectedMembers,
+                                                ).every((id) =>
+                                                    block.users.some(
+                                                        (u) => u.id === id,
+                                                    ),
+                                                )}
+
                                             <div
                                                 class={`border rounded-lg overflow-hidden transition-all ${
                                                     isCurrentHour(
