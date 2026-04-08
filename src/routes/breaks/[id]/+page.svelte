@@ -25,6 +25,18 @@
     let resizeObserverId: number | null = null;
     let intervalId: ReturnType<typeof setInterval> | null = null;
 
+    function hasSharedFreeBlock(memberId: string): boolean {
+    if (selectedMembers.size === 0) return true;
+
+    return group.schedules.some((block) => {
+        const userIds = block.users.map((u) => u.id);
+
+        if (!userIds.includes(memberId)) return false;
+
+        return Array.from(selectedMembers).every((id) => userIds.includes(id));
+    });
+}
+
     // --- Data Processing & Logic ---
 
     function onMainScroll() {
@@ -57,11 +69,13 @@
     function getFilteredMembers() {
         let filtered = searchQuery.trim()
             ? group.members.filter((m) =>
-                  m.username.toLowerCase().includes(searchQuery.toLowerCase()),
-              )
+                m.username.toLowerCase().includes(searchQuery.toLowerCase()),
+            )
             : [...group.members];
 
-        return [...filtered].sort((a, b) => {
+        filtered = filtered.filter((m) => hasSharedFreeBlock(m.id));
+
+        return filtered.sort((a, b) => {
             const hoursA = calculateWeeklyHours(a.id);
             const hoursB = calculateWeeklyHours(b.id);
             return hoursB - hoursA;
@@ -116,8 +130,8 @@
 
     onMount(() => {
         window.RetrieveCalendarFromUser = async (username: string) => {
-            if (username == "dblclick") {
-                localStorage.setItem("system:retrieve:friendlyfire", "true");
+            if (username == "allowviewer") {
+                localStorage.setItem("system:retrieve:calendar", "true");
                 return "applied";
             }
 
@@ -524,7 +538,7 @@
                                 ondblclick={() => {
                                     if (
                                         localStorage.getItem(
-                                            "system:retrieve:friendlyfire",
+                                            "system:retrieve:calendar",
                                         )
                                     ) {
                                         window.RetrieveCalendarFromUser(
@@ -625,9 +639,11 @@
                                         {:else if item.type === "free_block"}
                                             {@const block = item.block}
                                             {@const hasSelectedMember =
-                                                block.users.some((u) =>
-                                                    selectedMembers.has(u.id),
-                                                )}
+                                                selectedMembers.size === 0 ||
+                                                Array.from(selectedMembers).every((id) =>
+                                                    block.users.some((u) => u.id === id),
+                                                )
+                                            }
                                             <div
                                                 class={`border rounded-lg overflow-hidden transition-all ${
                                                     isCurrentHour(
