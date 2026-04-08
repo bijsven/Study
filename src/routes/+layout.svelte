@@ -18,6 +18,22 @@
     let onlineUsersInterval: ReturnType<typeof setInterval> | null = null;
 
     onMount(async () => {
+        const startTime = Date.now();
+        const refreshDelayTime = 15 * 60 * 1000;
+
+        const checkAndRefresh = () => {
+            const timeElapsed = Date.now() - startTime;
+            if (
+                timeElapsed > refreshDelayTime &&
+                (document.hidden || !document.hidden)
+            ) {
+                window.location.reload();
+            }
+        };
+
+        document.addEventListener("visibilitychange", checkAndRefresh);
+        setTimeout(checkAndRefresh, refreshDelayTime);
+
         if (
             !(page.url.pathname == "/callback") &&
             !(page.url.pathname == "/migrate")
