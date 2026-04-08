@@ -1,6 +1,7 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
     import { pb } from "$lib/index";
+    import Loading from "@/ui/loading.svelte";
     import { ChevronRight } from "lucide-svelte";
     import { onMount } from "svelte";
     import { fade, fly } from "svelte/transition";
@@ -34,7 +35,7 @@
 </script>
 
 <content
-    class="absolute h-full w-full bg-white flex justify-center items-center"
+    class="absolute h-full w-full dark:bg-black bg-white flex justify-center items-center"
 >
     {#if loaded}
         <div
@@ -44,11 +45,11 @@
             <h1
                 in:fly={{ duration: 500, y: 20 }}
                 out:fly={{ duration: 500, y: -20, delay: 250 }}
-                class="text-3xl font-semibold text-black falt"
+                class="text-3xl font-semibold dark:text-white text-black falt"
             >
                 Tussenuren
             </h1>
-            <p class="-mt-4 text-sm opacity-65 falt">
+            <p class="-mt-4 text-sm opacity-65 falt dark:text-white text-black">
                 Kies een groep om door te gaan...
             </p>
 
@@ -58,39 +59,39 @@
                         onclick={() => {
                             goto(`/breaks/${group.id}`);
                         }}
-                        class="w-full cursor-pointer px-4 py-3 text-left border border-gray-200 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                        class="w-full cursor-pointer px-4 py-3 text-left border border-gray-200 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-gray-300 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-gray-500 dark:hover:bg-gray-700 dark:focus:ring-gray-600"
                     >
                         <div class="flex justify-between items-center">
                             <div>
-                                <div class="font-medium text-black">
+                                <div
+                                    class="font-medium text-black dark:text-white"
+                                >
                                     {group.name}
                                 </div>
-                                <div class="text-[0.65rem] text-gray-500">
+                                <div
+                                    class="text-[0.65rem] text-gray-500 dark:text-gray-400"
+                                >
                                     {group.id}
                                 </div>
                             </div>
-                            <ChevronRight />
+                            <div class="text-gray-400 dark:text-gray-500">
+                                <ChevronRight />
+                            </div>
                         </div>
                     </button>
+                {:else}
+                    <p class="dark:text-white text-black">
+                        Het lijkt erop dat je geen groep hebt, wil je er een <a
+                            href="/account"
+                            class="underline">toevoegen</a
+                        >? Dat kan je doen door op "groepen" te klikken, en
+                        daarna onderaan een code in te vullen en op ENTER te
+                        drukken.
+                    </p>
                 {/each}
             </div>
         </div>
     {:else}
-        <div>
-            <h1
-                in:fly={{ duration: 500, y: 20 }}
-                out:fly={{ duration: 500, y: -20, delay: 250 }}
-                class="text-3xl font-semibold text-black falt"
-            >
-                Tussenuren
-            </h1>
-            <p
-                in:fly={{ duration: 500, y: 10, delay: 250 }}
-                out:fly={{ duration: 500, y: -10 }}
-                class="falt text-right opacity-65 text-xs"
-            >
-                een app bijsven
-            </p>
-        </div>
+        <Loading />
     {/if}
 </content>

@@ -105,6 +105,23 @@
     <link rel="icon" href={favicon} />
 </svelte:head>
 
+{#if import.meta.env.DEV}
+    <div class="pointer-events-none opacity-100 z-9999 inset-0 fixed">
+        <div
+            class="fixed inset-0 z-9998 pointer-events-none border-red-600 border-5"
+        ></div>
+        <div
+            class="fixed inset-0 z-9999 pointer-events-none rounded-2xl border-red-600 border-5"
+        >
+            <div
+                class="absolute -top-1 left-1/2 -translate-x-1/2 bg-red-600 text-white text-[10px] font-bold px-3 py-1 rounded-b-lg uppercase tracking-wider"
+            >
+                Dev Mode
+            </div>
+        </div>
+    </div>
+{/if}
+
 {#if page.url.pathname !== "/"}
     <a
         onmouseenter={() => {
