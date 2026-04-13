@@ -30,7 +30,7 @@
     });
 
     let weekDays = $derived(
-        Array.from({ length: 7 }, (_, i) => {
+        Array.from({ length: 5 }, (_, i) => {
             const date = new Date(startOfWeek);
             date.setDate(startOfWeek.getDate() + i);
             return date;
