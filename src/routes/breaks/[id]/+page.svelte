@@ -244,7 +244,6 @@
                     cancelAnimationFrame(resizeObserverId);
                 scrollContainer?.removeEventListener("scroll", onMainScroll);
                 resizeObserver.disconnect();
-                darkModeQuery.removeEventListener("change", applyTheme);
             };
         }
 
@@ -257,7 +256,6 @@
             if (syncScrollId !== null) cancelAnimationFrame(syncScrollId);
             if (resizeObserverId !== null)
                 cancelAnimationFrame(resizeObserverId);
-            darkModeQuery.removeEventListener("change", applyTheme);
         };
     });
 
@@ -509,6 +507,7 @@
                     </div>
 
                     <div
+                        data-scroll-container
                         class="space-y-2 overflow-y-auto pr-2"
                         bind:this={sidebarContainer}
                     >
