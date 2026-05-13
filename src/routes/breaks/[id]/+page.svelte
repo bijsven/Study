@@ -488,12 +488,101 @@
         in:fade={{ delay: 500 }}
         class="flex gap-0 h-screen mx-auto absolute bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 overflow-hidden duration-300"
     >
+<<<<<<< HEAD
+        <div>
+            <h1
+                in:fly={{ duration: 500, y: 20 }}
+                out:fly={{ duration: 500, y: -20, delay: 250 }}
+                class="text-3xl font-semibold text-black dark:text-white falt"
+            >
+                Tussenuren
+            </h1>
+            <p
+                in:fly={{ duration: 500, y: 10, delay: 250 }}
+                out:fly={{ duration: 500, y: -10 }}
+                class="falt text-right opacity-65 text-xs text-black dark:text-zinc-400"
+            >
+                een app bijsven
+            </p>
+        </div>
+    </div>
+{:else}
+    <div
+        class="w-full h-full flex justify-center items-center absolute bg-white dark:bg-zinc-950"
+    >
+        <div
+            in:fade={{ delay: 500 }}
+            class="flex gap-0 h-screen mx-auto absolute bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 overflow-hidden duration-300"
+        >
+            <div class="w-80 p-6 mt-12 overflow-y-auto hidden lg:flex flex-col">
+                <div style="flex-shrink: 0;">
+                    <div class="flex gap-3 items-center">
+                        <h1 class="text-2xl font-bold dark:text-white">
+                            {group.name}
+                        </h1>
+                    </div>
+                    <p class="text-xs text-gray-500 dark:text-zinc-400 mt-1">
+                        {group.members.length}
+                        {group.members.length === 1 ? "lid" : "leden"}
+                    </p>
+                </div>
+
+                <div class="mt-8 flex flex-col min-h-0">
+                    <h3
+                        class="text-sm font-semibold mb-3 dark:text-zinc-300"
+                        style="flex-shrink: 0;"
+                    >
+                        Members
+                    </h3>
+
+                    <div class="mb-4" style="flex-shrink: 0;">
+                        <input
+                            type="text"
+                            placeholder="Zoeken..."
+                            bind:value={searchQuery}
+                            class="w-full px-3 py-2 text-xs border border-black/10 dark:border-white/10 dark:bg-zinc-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20 transition-colors"
+                        />
+                    </div>
+
+                    <div
+                        data-scroll-container
+                        class="space-y-2 overflow-y-auto pr-2"
+                        bind:this={sidebarContainer}
+                    >
+                        {#each getFilteredMembers() as member, i}
+                            {@const isSelected = selectedMembers.has(member.id)}
+                            <button
+                                transition:fly|global={{
+                                    y: 15,
+                                    duration: 300,
+                                    delay: Math.min(i * 25, 250) + 600,
+                                }}
+                                onclick={() => toggleMember(member.id)}
+                                class={`w-full text-left px-3 py-2 rounded-lg transition-all text-xs cursor-pointer border ${
+                                    isSelected
+                                        ? "bg-black text-white border-black dark:bg-white dark:text-black dark:border-white"
+                                        : "bg-gray-50 text-gray-700 border-transparent hover:bg-gray-100 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                                }`}
+                            >
+                                <div class="flex justify-between items-center">
+                                    <div class="font-medium">
+                                        {member.username}
+                                    </div>
+                                    <div class="text-[10px] opacity-70">
+                                        {calculateWeeklyHours(member.id)}h/week
+                                    </div>
+                                </div>
+                            </button>
+                        {/each}
+                    </div>
+=======
         <div class="w-80 p-6 mt-12 overflow-y-auto hidden lg:flex flex-col">
             <div style="flex-shrink: 0;">
                 <div class="flex gap-3 items-center">
                     <h1 class="text-2xl font-bold dark:text-white">
                         {group.name}
                     </h1>
+>>>>>>> 828ba82d7a2cc7aba60a880062dae68653cc9aec
                 </div>
                 <p class="text-xs text-gray-500 dark:text-zinc-400 mt-1">
                     {group.members.length}
