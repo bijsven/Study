@@ -89,7 +89,7 @@
 {#if mounted}
     <div
         in:fade={{ delay: 1000, duration: 300 }}
-        class="min-h-screen bg-black flex flex-col items-center justify-start p-6 font-sans"
+        class="h-screen bg-black flex flex-col items-center justify-start p-6 font-sans"
     >
         <div
             in:fly={{ duration: 500, y: -10, easing: cubicOut }}
@@ -142,8 +142,7 @@
         {:else}
             <div
                 in:fly={{ duration: 500, y: 10, easing: cubicOut }}
-                class="w-full max-w-5xl grid grid-cols-5 gap-2"
-            >
+                class="h-full w-full max-w-5xl grid grid-cols-5 gap-2 overflow-y-auto">
                 {#each weekDays as dayDate, i}
                     {@const isToday =
                         dayDate.toDateString() === new Date().toDateString()}
