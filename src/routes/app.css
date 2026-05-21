@@ -38,6 +38,9 @@
     --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
     --sidebar-border: oklch(0.92 0.004 286.32);
     --sidebar-ring: oklch(0.723 0.219 149.579);
+
+    /* scrollbar color */
+    scrollbar-color: oklch(55.1% 0.027 264.364) oklch(0% 0 0 / 0);
 }
 
 .dark {
@@ -72,4 +75,7 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.527 0.154 150.069);
+
+    /* scrollbar color */
+    scrollbar-color: oklch(70.5% 0.015 286.067) oklch(0% 0 0 / 0);
 }
