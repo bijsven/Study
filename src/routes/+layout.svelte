@@ -140,7 +140,7 @@
             }
         }}
         href="/"
-        class="absolute duration-200 z-50 bottom-8 flex lg:left-8 left-[50%] lg:translate-x-0 translate-x-[-50%]
+        class="fixed duration-200 z-50 bottom-8 flex lg:left-8 left-[50%] lg:translate-x-0 translate-x-[-50%]
             gap-1 hover:scale-101
             lg:hover:font-semibold lg:opacity-45 text-xs lg:hover:opacity-100
             px-3 py-2 rounded-lg bg-black/80 text-white backdrop-blur-xl

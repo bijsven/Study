@@ -519,7 +519,7 @@
                 </div>
 
                 <div
-                    class="space-y-2 overflow-y-auto pr-2"
+                    class="space-y-2 overflow-y-auto pr-2" data-scroll-container
                     bind:this={sidebarContainer}
                 >
                     {#each getFilteredMembers() as member, i}
