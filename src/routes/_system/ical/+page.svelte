@@ -187,17 +187,27 @@
                                 <div
                                     class="p-2.5 rounded-xl bg-white/10 backdrop-blur-sm border border-white/10 hover:bg-white/15 duration-200"
                                 >
-                                    <div
-                                        class="text-white text-xs font-medium truncate"
-                                    >
-                                        {event.summary.split("-")[1]}
-                                    </div>
+                                    {#if event.summary.split("-"[1])}
+                                        <div
+                                            class="text-white text-xs font-medium truncate"
+                                        >
+                                            {event.summary.split("-")[1]}
+                                        </div>
+                                    {:else}
+                                        <div
+                                            class="text-white text-xs font-medium truncate"
+                                        >
+                                            {event.summary}
+                                        </div>
+                                    {/if}
                                     <div class="text-white/40 text-xs mt-0.5">
-                                        {event.start.toLocaleTimeString([], {
-                                            hour: "2-digit",
-                                            minute: "2-digit",
-                                        })}
-                                        - {event.summary.split("-")[2]}
+                                        {#if event.summary.split("-")[2]}
+                                            {event.start.toLocaleTimeString([], {
+                                                hour: "2-digit",
+                                                minute: "2-digit",
+                                            })}
+                                            - {event.summary.split("-")[2]}
+                                        {/if}
                                     </div>
                                     {#if event.location}
                                         <div

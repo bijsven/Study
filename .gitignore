@@ -24,3 +24,6 @@ vite.config.ts.timestamp-*
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Add package-lock because we use bun.
+package-lock.json
