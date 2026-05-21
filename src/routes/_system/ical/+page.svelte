@@ -142,8 +142,7 @@
         {:else}
             <div
                 in:fly={{ duration: 500, y: 10, easing: cubicOut }}
-                class="h-full w-full max-w-5xl grid grid-cols-5 gap-2 overflow-y-auto"
-            >
+                class="h-full w-full max-w-5xl grid grid-cols-5 gap-2 overflow-y-auto">
                 {#each weekDays as dayDate, i}
                     {@const isToday =
                         dayDate.toDateString() === new Date().toDateString()}

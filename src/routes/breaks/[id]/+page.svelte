@@ -568,7 +568,7 @@
             class="h-full w-px bg-black/10 dark:bg-white/10 lg:block hidden"
         ></div>
 
-        <div class="flex-1 overflow-y-auto p-6 pt-14" data-scroll-container>
+        <div class="flex-1 overflow-y-auto p-6 pt-14 scrollbar-track-white scrollbar-thumb-gray-500 dark:scrollbar-track-zinc-950 dark:scrollbar-thumb-zinc-400" data-scroll-container>
             {#if !group.schedules.length}
                 <div
                     class="flex flex-col items-center mt-12 opacity-60 text-center dark:text-zinc-400"
