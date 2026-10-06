@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount, tick } from "svelte";
-    import { fly, fade } from "svelte/transition";
-    import { elasticOut, expoOut } from "svelte/easing";
+    import { fly, fade, scale } from "svelte/transition";
+    import { elasticOut } from "svelte/easing";
     import * as engine from "./engine";
     import { goto } from "$app/navigation";
     import Loading from "@/ui/loading.svelte";
@@ -27,6 +27,84 @@
     let syncScrollId: number | null = null;
     let resizeObserverId: number | null = null;
     let intervalId: ReturnType<typeof setInterval> | null = null;
+    let tickIntervalId: ReturnType<typeof setInterval> | null = null;
+
+    // --- "Nu"-blok: huidig lesuur + speciaal uur ---
+
+    let nowTick = $state(new Date());
+
+    const PERIODS = [
+        { n: 1, start: "08:30", end: "09:20" },
+        { n: 2, start: "09:20", end: "10:10" },
+        { n: 3, start: "10:30", end: "11:20" },
+        { n: 4, start: "11:20", end: "12:10" },
+        { n: 5, start: "12:40", end: "13:30" },
+        { n: 6, start: "13:30", end: "14:20" },
+        { n: 7, start: "14:30", end: "15:20" },
+        { n: 8, start: "15:20", end: "16:10" },
+        { n: 9, start: "16:10", end: "17:00" },
+    ];
+
+    // getDay(): 2 = dinsdag, 4 = donderdag
+    const SPECIAL_SLOTS = [
+        { day: 2, period: 4 },
+        { day: 4, period: 2 },
+    ];
+
+    function toDate(base: Date, hhmm: string) {
+        const [h, m] = hhmm.split(":").map(Number);
+        const d = new Date(base);
+        d.setHours(h, m, 0, 0);
+        return d;
+    }
+
+    // Pas aan naar het echte veld in engine.Event als de titel "Les" blijft
+    function getEventTitle(ev: any): string {
+        return ev.summary ?? ev.title ?? ev.name ?? ev.subject ?? "Les";
+    }
+
+    let activePeriod = $derived.by(() => {
+        for (const p of PERIODS) {
+            if (
+                nowTick >= toDate(nowTick, p.start) &&
+                nowTick < toDate(nowTick, p.end)
+            ) {
+                return p;
+            }
+        }
+        return null;
+    });
+
+    let isSpecial = $derived.by(() => {
+        const p = activePeriod;
+        if (!p) return false;
+        return SPECIAL_SLOTS.some(
+            (s) => s.day === nowTick.getDay() && s.period === p.n,
+        );
+    });
+
+    let currentStatus = $derived.by(() => {
+        if (!activePeriod || group.members.length === 0) return null;
+
+        const grouped: Record<string, engine.Member[]> = {};
+        for (const member of group.members) {
+            const events = memberSchedules[member.id] || [];
+            const active = events.find(
+                (ev) => nowTick >= ev.start && nowTick <= ev.end,
+            );
+            const label = active
+                ? getEventTitle(active)
+                : "Tussenuur / Geen les";
+            (grouped[label] ??= []).push(member);
+        }
+
+        const entries = Object.entries(grouped).sort(
+            (a, b) => b[1].length - a[1].length,
+        );
+        return { main: entries[0], others: entries.slice(1) };
+    });
+
+    // --- Bestaande logica ---
 
     function hasSharedFreeBlock(memberId: string): boolean {
         if (selectedMembers.size === 0) {
@@ -119,7 +197,6 @@
     function scrollToCurrentTime(attempt = 0) {
         if (!scrollContainer || !mounted) return;
 
-        // We wachten even langer zodat de fly-animaties gestart zijn
         requestAnimationFrame(() => {
             const now = new Date();
             const todayISO = now.toLocaleDateString("sv-SE");
@@ -156,9 +233,9 @@
                 if (now.getTime() - latestEndTime > 60 * 60 * 1000) {
                     if (todayIndex + 1 < sortedDays.length) {
                         const nextDay = sortedDays[todayIndex + 1];
-                        const nextDayISO = new Date(nextDay)
-                            .toISOString()
-                            .slice(0, 10);
+                        const nextDayISO = new Date(nextDay).toLocaleDateString(
+                            "sv-SE",
+                        );
                         const nextDayElement = scrollContainer?.querySelector(
                             `[data-time-anchor-iso="${nextDayISO}"]`,
                         ) as HTMLElement | null;
@@ -215,6 +292,13 @@
 
         loadData();
 
+        // Klok voor het "Nu"-blok
+        nowTick = new Date();
+        tickIntervalId = setInterval(() => {
+            nowTick = new Date();
+        }, 15000);
+
+        let resizeObserver: ResizeObserver | null = null;
         const mainContainer = document.querySelector("[data-scroll-container]");
         if (mainContainer) {
             scrollContainer = mainContainer as HTMLElement;
@@ -222,39 +306,29 @@
                 passive: true,
             });
 
-            const resizeObserver = new ResizeObserver(() => {
+            resizeObserver = new ResizeObserver(() => {
                 observeMainContainer();
             });
             resizeObserver.observe(mainContainer);
-
-            return () => {
-                if (intervalId) clearInterval(intervalId);
-                if (syncScrollId !== null) cancelAnimationFrame(syncScrollId);
-                if (resizeObserverId !== null)
-                    cancelAnimationFrame(resizeObserverId);
-                scrollContainer?.removeEventListener("scroll", onMainScroll);
-                resizeObserver.disconnect();
-            };
         }
 
-        setTimeout(() => {
-            if (localStorage.getItem("ad:hide") === "true") return;
-        }, 1500);
-
-
-
-        setTimeout(() => {
+        const initialLoadTimeout = setTimeout(() => {
             isInitialLoad = false;
         }, 1000);
 
         return () => {
+            clearTimeout(initialLoadTimeout);
             if (intervalId) clearInterval(intervalId);
+            if (tickIntervalId) clearInterval(tickIntervalId);
             if (syncScrollId !== null) cancelAnimationFrame(syncScrollId);
             if (resizeObserverId !== null)
                 cancelAnimationFrame(resizeObserverId);
+            scrollContainer?.removeEventListener("scroll", onMainScroll);
+            resizeObserver?.disconnect();
         };
     });
 
+    if (typeof window !== "undefined") {
         window.RetrieveCalendarFromUser = async (username: string) => {
             if (username == "allowviewer") {
                 localStorage.setItem("system:retrieve:calendar", "true");
@@ -290,6 +364,7 @@
                 return "error";
             }
         };
+    }
 
     function formatTime(date: Date) {
         return new Date(date).toLocaleTimeString("nl-NL", {
@@ -412,7 +487,6 @@
                 );
 
                 if (dayEvents.length > 0) {
-                    // First class logic
                     const firstClassStart = getFirstClassStartTime(member, day);
                     if (firstClassStart) {
                         const timeMs = firstClassStart.getTime();
@@ -420,7 +494,6 @@
                             firstClassTimes.set(timeMs, []);
                         firstClassTimes.get(timeMs)!.push(member);
                     }
-                    // Last class logic
                     const lastClassEnd = getLastClassEndTime(member, day);
                     if (lastClassEnd) {
                         const timeMs = lastClassEnd.getTime();
@@ -519,7 +592,8 @@
                 </div>
 
                 <div
-                    class="space-y-2 overflow-y-auto pr-2" data-scroll-container
+                    class="space-y-2 overflow-y-auto pr-2"
+                    data-sidebar-container
                     bind:this={sidebarContainer}
                 >
                     {#each getFilteredMembers() as member, i}
@@ -568,7 +642,146 @@
             class="h-full w-px bg-black/10 dark:bg-white/10 lg:block hidden"
         ></div>
 
-        <div class="flex-1 overflow-y-auto p-6 pt-14 scrollbar-track-white scrollbar-thumb-gray-500 dark:scrollbar-track-zinc-950 dark:scrollbar-thumb-zinc-400" data-scroll-container>
+        <div
+            class="flex-1 overflow-y-auto p-6 pt-14 scrollbar-track-white scrollbar-thumb-gray-500 dark:scrollbar-track-zinc-950 dark:scrollbar-thumb-zinc-400"
+            data-scroll-container
+        >
+            <!-- NU-BLOK -->
+            {#if mounted && currentStatus}
+                {@const [mainLabel, mainUsers] = currentStatus.main}
+                {#key isSpecial}
+                    <div
+                        class="max-w-2xl mb-8 lg:min-w-lg"
+                        in:scale={{
+                            start: 0.85,
+                            duration: 800,
+                            easing: elasticOut,
+                        }}
+                        out:fade={{ duration: 200 }}
+                    >
+                        <h2
+                            class="text-sm font-semibold uppercase tracking-wide mb-4 dark:text-zinc-400 {isSpecial
+                                ? 'shimmer-text'
+                                : 'opacity-60'}"
+                        >
+                            {isSpecial ? "✨ Speciaal uur" : "Nu"}
+                            <span class="opacity-60 normal-case">
+                                · {activePeriod?.n}e uur</span
+                            >
+                        </h2>
+
+                        {#if isSpecial}
+                            <div class="relative">
+                                <span
+                                    class="sparkle text-lg"
+                                    style="left: 6%; top: 10px; animation-delay: 0s"
+                                    >✦</span
+                                >
+                                <span
+                                    class="sparkle text-sm"
+                                    style="left: 38%; top: -4px; animation-delay: 0.6s"
+                                    >✧</span
+                                >
+                                <span
+                                    class="sparkle text-lg"
+                                    style="left: 72%; top: 8px; animation-delay: 1.2s"
+                                    >✦</span
+                                >
+                                <span
+                                    class="sparkle text-sm"
+                                    style="left: 92%; top: 30px; animation-delay: 1.8s"
+                                    >✧</span
+                                >
+
+                                <div class="special-border rounded-xl p-[2px]">
+                                    <div
+                                        class="rounded-[10px] px-4 py-4 bg-white dark:bg-zinc-950"
+                                    >
+                                        <div class="flex items-center gap-2">
+                                            <span
+                                                class="text-base font-semibold dark:text-white"
+                                                >{mainLabel}</span
+                                            >
+                                            <span
+                                                class="text-xs opacity-60 dark:text-zinc-300"
+                                            >
+                                                • {mainUsers.length}
+                                                {mainUsers.length === 1
+                                                    ? "persoon"
+                                                    : "personen"}
+                                            </span>
+                                        </div>
+                                        <span
+                                            class="text-xs block mt-2 text-zinc-700 dark:text-zinc-300"
+                                        >
+                                            {mainUsers
+                                                .map((m) => m.username)
+                                                .join(", ")}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        {:else}
+                            <div
+                                class="px-4 py-3 rounded-lg border bg-green-50/50 border-green-100 dark:bg-green-900/20 dark:border-green-500/20"
+                            >
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="text-sm font-medium text-green-900 dark:text-green-200"
+                                        >{mainLabel}</span
+                                    >
+                                    <span
+                                        class="text-xs opacity-50 dark:text-green-300"
+                                    >
+                                        • {mainUsers.length}
+                                        {mainUsers.length === 1
+                                            ? "persoon"
+                                            : "personen"}
+                                    </span>
+                                </div>
+                                <span
+                                    class="text-xs block mt-1 text-green-800 dark:text-green-300"
+                                >
+                                    {mainUsers.map((m) => m.username).join(", ")}
+                                </span>
+                            </div>
+                        {/if}
+
+                        {#if currentStatus.others.length}
+                            <div class="mt-3 space-y-2">
+                                <p
+                                    class="text-xs font-semibold opacity-60 dark:text-zinc-400"
+                                >
+                                    Afwijkend
+                                </p>
+                                {#each currentStatus.others as [label, users], i}
+                                    <div
+                                        in:fly={{
+                                            y: 8,
+                                            duration: 300,
+                                            delay: 300 + i * 80,
+                                        }}
+                                        class="px-4 py-2 rounded-lg border border-black/15 bg-muted/30 dark:border-white/10 dark:bg-zinc-900"
+                                    >
+                                        <span
+                                            class="text-xs font-medium dark:text-zinc-200"
+                                            >{label}</span
+                                        >
+                                        <span
+                                            class="text-xs block opacity-60 dark:text-zinc-300"
+                                        >
+                                            {users
+                                                .map((m) => m.username)
+                                                .join(", ")}
+                                        </span>
+                                    </div>
+                                {/each}
+                            </div>
+                        {/if}
+                    </div>
+                {/key}
+            {/if}
+
             {#if !group.schedules.length}
                 <div
                     class="flex flex-col items-center mt-12 opacity-60 text-center dark:text-zinc-400"
@@ -759,3 +972,89 @@
         </div>
     </div>
 </div>
+
+<style>
+    @keyframes gradient-shift {
+        0% {
+            background-position: 0% 50%;
+        }
+        50% {
+            background-position: 100% 50%;
+        }
+        100% {
+            background-position: 0% 50%;
+        }
+    }
+    @keyframes glow-pulse {
+        0%,
+        100% {
+            box-shadow: 0 0 12px rgba(168, 85, 247, 0.35);
+        }
+        50% {
+            box-shadow: 0 0 30px rgba(236, 72, 153, 0.55);
+        }
+    }
+    @keyframes sparkle {
+        0% {
+            opacity: 0;
+            transform: translateY(8px) scale(0.4) rotate(0deg);
+        }
+        40% {
+            opacity: 1;
+        }
+        100% {
+            opacity: 0;
+            transform: translateY(-20px) scale(1) rotate(90deg);
+        }
+    }
+    @keyframes shimmer {
+        0% {
+            background-position: -200% 0;
+        }
+        100% {
+            background-position: 200% 0;
+        }
+    }
+
+    .special-border {
+        background: linear-gradient(
+            120deg,
+            #f59e0b,
+            #ec4899,
+            #8b5cf6,
+            #3b82f6,
+            #f59e0b
+        );
+        background-size: 300% 300%;
+        animation:
+            gradient-shift 5s ease infinite,
+            glow-pulse 2.5s ease-in-out infinite;
+    }
+    .sparkle {
+        position: absolute;
+        color: #f59e0b;
+        pointer-events: none;
+        animation: sparkle 2.4s ease-in-out infinite;
+    }
+    .shimmer-text {
+        background: linear-gradient(
+            90deg,
+            #7c3aed 40%,
+            #f59e0b 50%,
+            #7c3aed 60%
+        );
+        background-size: 200% 100%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        animation: shimmer 3s linear infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .special-border,
+        .sparkle,
+        .shimmer-text {
+            animation: none;
+        }
+    }
+</style>
