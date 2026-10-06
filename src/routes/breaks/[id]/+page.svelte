@@ -1,7 +1,6 @@
 <script lang="ts">
     import { onMount, tick } from "svelte";
-    import { fly, fade, scale } from "svelte/transition";
-    import { elasticOut } from "svelte/easing";
+    import { fly, fade, slide } from "svelte/transition";
     import * as engine from "./engine";
     import { goto } from "$app/navigation";
     import Loading from "@/ui/loading.svelte";
@@ -18,21 +17,21 @@
 
     let memberSchedules = $state({} as Record<string, engine.Event[]>);
 
+    // Alleen de hoofdkolom (tussenuren-lijst) heeft een scroll-referentie nodig.
+    // De sidebar scrolt los en wordt NIET meer gesynchroniseerd.
     let scrollContainer: HTMLElement | null = $state(null);
-    let sidebarContainer: HTMLElement | null = $state(null);
 
     let selectedMembers = $state<Set<string>>(new Set());
     let searchQuery = $state("");
 
-    let syncScrollId: number | null = null;
-    let resizeObserverId: number | null = null;
     let intervalId: ReturnType<typeof setInterval> | null = null;
-    let tickIntervalId: ReturnType<typeof setInterval> | null = null;
 
-    // --- "Nu"-blok: huidig lesuur + speciaal uur ---
+    // --- Dalton Maatwerk uur ---
 
+    let maatwerkOpen = $state(false);
     let nowTick = $state(new Date());
 
+    // Lesuurtijden
     const PERIODS = [
         { n: 1, start: "08:30", end: "09:20" },
         { n: 2, start: "09:20", end: "10:10" },
@@ -46,9 +45,9 @@
     ];
 
     // getDay(): 2 = dinsdag, 4 = donderdag
-    const SPECIAL_SLOTS = [
-        { day: 2, period: 4 },
-        { day: 4, period: 2 },
+    const MAATWERK_SLOTS = [
+        { day: 2, period: 4, label: "Dinsdag" },
+        { day: 4, period: 2, label: "Donderdag" },
     ];
 
     function toDate(base: Date, hhmm: string) {
@@ -63,48 +62,57 @@
         return ev.summary ?? ev.title ?? ev.name ?? ev.subject ?? "Les";
     }
 
-    let activePeriod = $derived.by(() => {
-        for (const p of PERIODS) {
-            if (
-                nowTick >= toDate(nowTick, p.start) &&
-                nowTick < toDate(nowTick, p.end)
-            ) {
-                return p;
-            }
+    // Eerstvolgende keer dat dit uur nog niet voorbij is
+    function nextSlotRange(day: number, periodN: number, from: Date) {
+        const p = PERIODS.find((x) => x.n === periodN);
+        if (!p) return null;
+
+        for (let off = 0; off <= 7; off++) {
+            const d = new Date(from);
+            d.setDate(from.getDate() + off);
+            if (d.getDay() !== day) continue;
+
+            const start = toDate(d, p.start);
+            const end = toDate(d, p.end);
+            if (end > from) return { start, end };
         }
         return null;
+    }
+
+    let maatwerk = $derived.by(() => {
+        return MAATWERK_SLOTS.flatMap((slot) => {
+            const range = nextSlotRange(slot.day, slot.period, nowTick);
+            if (!range) return [];
+
+            const grouped: Record<string, engine.Member[]> = {};
+            for (const member of group.members) {
+                const events = memberSchedules[member.id] || [];
+                const active = events.find(
+                    (ev) => ev.start < range.end && ev.end > range.start,
+                );
+                const label = active
+                    ? getEventTitle(active)
+                    : "Geen les / vrij";
+                (grouped[label] ??= []).push(member);
+            }
+
+            const groups = Object.entries(grouped)
+                .map(
+                    ([label, users]) =>
+                        [
+                            label,
+                            [...users].sort((a, b) =>
+                                a.username.localeCompare(b.username),
+                            ),
+                        ] as [string, engine.Member[]],
+                )
+                .sort((a, b) => b[1].length - a[1].length);
+
+            return [{ ...slot, ...range, groups }];
+        });
     });
 
-    let isSpecial = $derived.by(() => {
-        const p = activePeriod;
-        if (!p) return false;
-        return SPECIAL_SLOTS.some(
-            (s) => s.day === nowTick.getDay() && s.period === p.n,
-        );
-    });
-
-    let currentStatus = $derived.by(() => {
-        if (!activePeriod || group.members.length === 0) return null;
-
-        const grouped: Record<string, engine.Member[]> = {};
-        for (const member of group.members) {
-            const events = memberSchedules[member.id] || [];
-            const active = events.find(
-                (ev) => nowTick >= ev.start && nowTick <= ev.end,
-            );
-            const label = active
-                ? getEventTitle(active)
-                : "Tussenuur / Geen les";
-            (grouped[label] ??= []).push(member);
-        }
-
-        const entries = Object.entries(grouped).sort(
-            (a, b) => b[1].length - a[1].length,
-        );
-        return { main: entries[0], others: entries.slice(1) };
-    });
-
-    // --- Bestaande logica ---
+    // --- Leden-filter ---
 
     function hasSharedFreeBlock(memberId: string): boolean {
         if (selectedMembers.size === 0) {
@@ -119,26 +127,6 @@
             return Array.from(selectedMembers).every((id) =>
                 userIds.includes(id),
             );
-        });
-    }
-
-    function onMainScroll() {
-        if (syncScrollId !== null) cancelAnimationFrame(syncScrollId);
-        syncScrollId = requestAnimationFrame(() => {
-            if (scrollContainer && sidebarContainer) {
-                sidebarContainer.scrollTop = scrollContainer.scrollTop;
-            }
-            syncScrollId = null;
-        });
-    }
-
-    function observeMainContainer() {
-        if (resizeObserverId !== null) cancelAnimationFrame(resizeObserverId);
-        resizeObserverId = requestAnimationFrame(() => {
-            if (scrollContainer && sidebarContainer) {
-                sidebarContainer.scrollTop = scrollContainer.scrollTop;
-            }
-            resizeObserverId = null;
         });
     }
 
@@ -193,6 +181,8 @@
 
         return Math.round((totalMinutes / 60) * 10) / 10;
     }
+
+    // --- Scrollen naar vandaag / volgende dag ---
 
     function scrollToCurrentTime(attempt = 0) {
         if (!scrollContainer || !mounted) return;
@@ -284,6 +274,7 @@
             checkAndScrollToNextDay();
 
             intervalId = setInterval(() => {
+                nowTick = new Date();
                 checkAndScrollToNextDay();
             }, 60000);
 
@@ -292,26 +283,6 @@
 
         loadData();
 
-        // Klok voor het "Nu"-blok
-        nowTick = new Date();
-        tickIntervalId = setInterval(() => {
-            nowTick = new Date();
-        }, 15000);
-
-        let resizeObserver: ResizeObserver | null = null;
-        const mainContainer = document.querySelector("[data-scroll-container]");
-        if (mainContainer) {
-            scrollContainer = mainContainer as HTMLElement;
-            mainContainer.addEventListener("scroll", onMainScroll, {
-                passive: true,
-            });
-
-            resizeObserver = new ResizeObserver(() => {
-                observeMainContainer();
-            });
-            resizeObserver.observe(mainContainer);
-        }
-
         const initialLoadTimeout = setTimeout(() => {
             isInitialLoad = false;
         }, 1000);
@@ -319,12 +290,6 @@
         return () => {
             clearTimeout(initialLoadTimeout);
             if (intervalId) clearInterval(intervalId);
-            if (tickIntervalId) clearInterval(tickIntervalId);
-            if (syncScrollId !== null) cancelAnimationFrame(syncScrollId);
-            if (resizeObserverId !== null)
-                cancelAnimationFrame(resizeObserverId);
-            scrollContainer?.removeEventListener("scroll", onMainScroll);
-            resizeObserver?.disconnect();
         };
     });
 
@@ -591,11 +556,7 @@
                     />
                 </div>
 
-                <div
-                    class="space-y-2 overflow-y-auto pr-2"
-                    data-sidebar-container
-                    bind:this={sidebarContainer}
-                >
+                <div class="space-y-2 overflow-y-auto pr-2">
                     {#each getFilteredMembers() as member, i}
                         {@const isSelected = selectedMembers.has(member.id)}
                         <button
@@ -643,143 +604,89 @@
         ></div>
 
         <div
+            bind:this={scrollContainer}
             class="flex-1 overflow-y-auto p-6 pt-14 scrollbar-track-white scrollbar-thumb-gray-500 dark:scrollbar-track-zinc-950 dark:scrollbar-thumb-zinc-400"
-            data-scroll-container
         >
-            <!-- NU-BLOK -->
-            {#if mounted && currentStatus}
-                {@const [mainLabel, mainUsers] = currentStatus.main}
-                {#key isSpecial}
-                    <div
-                        class="max-w-2xl mb-8 lg:min-w-lg"
-                        in:scale={{
-                            start: 0.85,
-                            duration: 800,
-                            easing: elasticOut,
-                        }}
-                        out:fade={{ duration: 200 }}
+            <!-- DALTON MAATWERK UUR (uitklapbaar) -->
+            {#if mounted && maatwerk.length}
+                <div class="max-w-2xl mb-8 lg:min-w-lg">
+                    <button
+                        onclick={() => (maatwerkOpen = !maatwerkOpen)}
+                        aria-expanded={maatwerkOpen}
+                        class="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-black/15 bg-muted/30 dark:border-white/10 dark:bg-zinc-900 text-left cursor-pointer transition-all hover:bg-black/5 dark:hover:bg-white/5"
                     >
-                        <h2
-                            class="text-sm font-semibold uppercase tracking-wide mb-4 dark:text-zinc-400 {isSpecial
-                                ? 'shimmer-text'
-                                : 'opacity-60'}"
+                        <span class="text-sm font-medium dark:text-zinc-200">
+                            Dalton Maatwerk uur
+                        </span>
+                        <svg
+                            class={`w-4 h-4 opacity-60 transition-transform duration-200 ${maatwerkOpen ? "rotate-180" : ""}`}
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
                         >
-                            {isSpecial ? "✨ Speciaal uur" : "Nu"}
-                            <span class="opacity-60 normal-case">
-                                · {activePeriod?.n}e uur</span
-                            >
-                        </h2>
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </button>
 
-                        {#if isSpecial}
-                            <div class="relative">
-                                <span
-                                    class="sparkle text-lg"
-                                    style="left: 6%; top: 10px; animation-delay: 0s"
-                                    >✦</span
-                                >
-                                <span
-                                    class="sparkle text-sm"
-                                    style="left: 38%; top: -4px; animation-delay: 0.6s"
-                                    >✧</span
-                                >
-                                <span
-                                    class="sparkle text-lg"
-                                    style="left: 72%; top: 8px; animation-delay: 1.2s"
-                                    >✦</span
-                                >
-                                <span
-                                    class="sparkle text-sm"
-                                    style="left: 92%; top: 30px; animation-delay: 1.8s"
-                                    >✧</span
-                                >
-
-                                <div class="special-border rounded-xl p-[2px]">
-                                    <div
-                                        class="rounded-[10px] px-4 py-4 bg-white dark:bg-zinc-950"
-                                    >
-                                        <div class="flex items-center gap-2">
-                                            <span
-                                                class="text-base font-semibold dark:text-white"
-                                                >{mainLabel}</span
-                                            >
-                                            <span
-                                                class="text-xs opacity-60 dark:text-zinc-300"
-                                            >
-                                                • {mainUsers.length}
-                                                {mainUsers.length === 1
-                                                    ? "persoon"
-                                                    : "personen"}
+                    {#if maatwerkOpen}
+                        <div transition:slide={{ duration: 250 }}>
+                            <div class="pt-4 space-y-6">
+                                {#each maatwerk as slot}
+                                    <div>
+                                        <h2
+                                            class="text-sm font-semibold opacity-60 uppercase tracking-wide mb-3 dark:text-zinc-400"
+                                        >
+                                            {slot.label} · {slot.period}e uur
+                                            <span class="normal-case">
+                                                ({formatDate(slot.start)}, {formatTime(
+                                                    slot.start,
+                                                )} - {formatTime(slot.end)})
                                             </span>
-                                        </div>
-                                        <span
-                                            class="text-xs block mt-2 text-zinc-700 dark:text-zinc-300"
-                                        >
-                                            {mainUsers
-                                                .map((m) => m.username)
-                                                .join(", ")}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        {:else}
-                            <div
-                                class="px-4 py-3 rounded-lg border bg-green-50/50 border-green-100 dark:bg-green-900/20 dark:border-green-500/20"
-                            >
-                                <div class="flex items-center gap-2">
-                                    <span
-                                        class="text-sm font-medium text-green-900 dark:text-green-200"
-                                        >{mainLabel}</span
-                                    >
-                                    <span
-                                        class="text-xs opacity-50 dark:text-green-300"
-                                    >
-                                        • {mainUsers.length}
-                                        {mainUsers.length === 1
-                                            ? "persoon"
-                                            : "personen"}
-                                    </span>
-                                </div>
-                                <span
-                                    class="text-xs block mt-1 text-green-800 dark:text-green-300"
-                                >
-                                    {mainUsers.map((m) => m.username).join(", ")}
-                                </span>
-                            </div>
-                        {/if}
+                                        </h2>
 
-                        {#if currentStatus.others.length}
-                            <div class="mt-3 space-y-2">
-                                <p
-                                    class="text-xs font-semibold opacity-60 dark:text-zinc-400"
-                                >
-                                    Afwijkend
-                                </p>
-                                {#each currentStatus.others as [label, users], i}
-                                    <div
-                                        in:fly={{
-                                            y: 8,
-                                            duration: 300,
-                                            delay: 300 + i * 80,
-                                        }}
-                                        class="px-4 py-2 rounded-lg border border-black/15 bg-muted/30 dark:border-white/10 dark:bg-zinc-900"
-                                    >
-                                        <span
-                                            class="text-xs font-medium dark:text-zinc-200"
-                                            >{label}</span
-                                        >
-                                        <span
-                                            class="text-xs block opacity-60 dark:text-zinc-300"
-                                        >
-                                            {users
-                                                .map((m) => m.username)
-                                                .join(", ")}
-                                        </span>
+                                        <div class="space-y-3">
+                                            {#each slot.groups as [label, users]}
+                                                <div
+                                                    class="border rounded-lg overflow-hidden border-black/15 bg-muted/30 dark:border-white/10 dark:bg-zinc-900"
+                                                >
+                                                    <div class="px-4 py-3">
+                                                        <div
+                                                            class="flex items-center gap-2 dark:text-zinc-200"
+                                                        >
+                                                            <span
+                                                                class="text-sm font-medium"
+                                                                >{label}</span
+                                                            >
+                                                            <span
+                                                                class="text-xs opacity-50"
+                                                            >
+                                                                ({users.length})
+                                                            </span>
+                                                        </div>
+                                                        <p
+                                                            class="text-xs mt-2 opacity-60 dark:text-zinc-300"
+                                                        >
+                                                            {users
+                                                                .map(
+                                                                    (m) =>
+                                                                        m.username,
+                                                                )
+                                                                .join(", ")}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            {/each}
+                                        </div>
                                     </div>
                                 {/each}
                             </div>
-                        {/if}
-                    </div>
-                {/key}
+                        </div>
+                    {/if}
+                </div>
             {/if}
 
             {#if !group.schedules.length}
@@ -972,89 +879,3 @@
         </div>
     </div>
 </div>
-
-<style>
-    @keyframes gradient-shift {
-        0% {
-            background-position: 0% 50%;
-        }
-        50% {
-            background-position: 100% 50%;
-        }
-        100% {
-            background-position: 0% 50%;
-        }
-    }
-    @keyframes glow-pulse {
-        0%,
-        100% {
-            box-shadow: 0 0 12px rgba(168, 85, 247, 0.35);
-        }
-        50% {
-            box-shadow: 0 0 30px rgba(236, 72, 153, 0.55);
-        }
-    }
-    @keyframes sparkle {
-        0% {
-            opacity: 0;
-            transform: translateY(8px) scale(0.4) rotate(0deg);
-        }
-        40% {
-            opacity: 1;
-        }
-        100% {
-            opacity: 0;
-            transform: translateY(-20px) scale(1) rotate(90deg);
-        }
-    }
-    @keyframes shimmer {
-        0% {
-            background-position: -200% 0;
-        }
-        100% {
-            background-position: 200% 0;
-        }
-    }
-
-    .special-border {
-        background: linear-gradient(
-            120deg,
-            #f59e0b,
-            #ec4899,
-            #8b5cf6,
-            #3b82f6,
-            #f59e0b
-        );
-        background-size: 300% 300%;
-        animation:
-            gradient-shift 5s ease infinite,
-            glow-pulse 2.5s ease-in-out infinite;
-    }
-    .sparkle {
-        position: absolute;
-        color: #f59e0b;
-        pointer-events: none;
-        animation: sparkle 2.4s ease-in-out infinite;
-    }
-    .shimmer-text {
-        background: linear-gradient(
-            90deg,
-            #7c3aed 40%,
-            #f59e0b 50%,
-            #7c3aed 60%
-        );
-        background-size: 200% 100%;
-        -webkit-background-clip: text;
-        background-clip: text;
-        color: transparent;
-        animation: shimmer 3s linear infinite;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .special-border,
-        .sparkle,
-        .shimmer-text {
-            animation: none;
-        }
-    }
-</style>
